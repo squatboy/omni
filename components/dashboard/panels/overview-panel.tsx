@@ -87,7 +87,7 @@ export function OverviewPanel({ snapshot }: { snapshot: DashboardSnapshot }) {
         </CardContent>
       </Card>
 
-      <div className="grid gap-4">
+      <div className="flex flex-col gap-4">
         <SourceHealthCard snapshot={snapshot} />
         <Card size="sm" className="rounded-md">
           <CardHeader>
