@@ -32,6 +32,8 @@ spec:
           env:
             - name: NODE_ENV
               value: production
+            - name: NODE_EXTRA_CA_CERTS
+              value: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
             - name: GITLAB_TOKEN
               valueFrom:
                 secretKeyRef:
