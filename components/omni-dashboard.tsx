@@ -1130,11 +1130,13 @@ function StatusDot({
   status: SourceStatus
   stale?: boolean
 }) {
+  const color = statusColor(status, stale)
   return (
     <span
       className="size-2 shrink-0 rounded-full"
       style={{
-        backgroundColor: statusColor(status, stale),
+        backgroundColor: color,
+        boxShadow: color !== "var(--status-muted)" ? `0 0 6px ${color}` : undefined,
       }}
     />
   )
