@@ -24,6 +24,7 @@ Common rules and each rule when working on frontend & backend
 
 ### Don't
 - Do not git push, commit only
+- Do not commit .gitignore files
 - Do not use obsidian vault about this project
 
 ### Frontend Rules

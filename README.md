@@ -31,54 +31,101 @@ Local build check:
 docker build --platform linux/amd64 -t omni:test .
 ```
 
-## GitOps Deploy
+## VM Docker Compose Deploy
 
-Runtime manifests live in `k8s/app/`. The Argo CD bootstrap manifest lives in
-`k8s/argocd/application.yaml`.
-The ingress manifest defines HTTP host routing for host only.
-Add a TLS Secret and Ingress `tls` block separately if HTTPS is required.
+Omni is deployed on an external VM with Docker Compose, not inside the
+Kubernetes cluster. If the cluster fails, the observer UI and collector must not
+fail with it.
 
-Before Argo sync, create runtime-only config and secrets:
+CI only verifies the app and publishes `ghcr.io/squatboy/omni:<full-commit-sha>`.
+To deploy a new version, update `deploy/.env` on the VM:
 
-```bash
-kubectl apply -f k8s/app/namespace.yaml
-kubectl -n omni create configmap omni-inventory \
-  --from-file=inventory.json=config/inventory.json \
-  --dry-run=client -o yaml | kubectl apply -f -
-kubectl -n omni create secret generic omni-secrets \
-  --from-literal=GITLAB_TOKEN='<set-gitlab-token>' \
-  --from-literal=ARGOCD_TOKEN='<set-argocd-token>' \
-  --dry-run=client -o yaml | kubectl apply -f -
+```dotenv
+OMNI_IMAGE_TAG=<full-commit-sha>
+KUBERNETES_API_URL=<kubernetes-api-url>
+KUBERNETES_BEARER_TOKEN=<omni-reader-token>
+NODE_EXTRA_CA_CERTS=/run/secrets/kubernetes-ca.crt
+GITLAB_TOKEN=<set-gitlab-token>
+ARGOCD_TOKEN=<set-argocd-token>
 ```
 
-First-time Argo CD bootstrap:
+Compose baseline:
 
-```bash
-kubectl apply -n argocd -f k8s/argocd/application.yaml
+```yaml
+services:
+  omni:
+    image: ghcr.io/squatboy/omni:${OMNI_IMAGE_TAG}
+    restart: unless-stopped
+    cap_add:
+      - NET_RAW
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      KUBERNETES_API_URL: ${KUBERNETES_API_URL}
+      KUBERNETES_BEARER_TOKEN: ${KUBERNETES_BEARER_TOKEN}
+      NODE_EXTRA_CA_CERTS: ${NODE_EXTRA_CA_CERTS}
+      GITLAB_TOKEN: ${GITLAB_TOKEN}
+      ARGOCD_TOKEN: ${ARGOCD_TOKEN}
+    volumes:
+      - ./config/inventory.json:/app/config/inventory.json:ro
+      - ./certs/kubernetes-ca.crt:/run/secrets/kubernetes-ca.crt:ro
 ```
 
-On `main` pushes, GitHub Actions builds and pushes
-`ghcr.io/squatboy/omni:<full-commit-sha>`, then commits the matching image tag
-to `k8s/app/deployment.yaml` with `[skip ci]`.
+Apply on the VM:
+
+```bash
+cd deploy
+mkdir -p config certs
+docker compose pull
+docker compose up -d
+docker compose ps
+curl -fsS http://<VM-IP>:3000/api/health/ready
+curl -fsS http://<VM-IP>:3000/api/collect/snapshot
+```
+
+After the container is running, open `http://<VM-IP>:3000` from the internal
+network. Make sure the VM firewall allows inbound TCP `3000`.
+
+## Kubernetes Read-Only Credential
+
+Do not deploy the Omni app to Kubernetes. Kubernetes only needs read-only
+credentials for the external collector.
+
+Create `namespace omni-observer`, `ServiceAccount omni-reader`,
+`ClusterRole/ClusterRoleBinding`, and a service-account-token Secret named
+`omni-reader-token`:
+
+```bash
+kubectl create namespace omni-observer --dry-run=client -o yaml | kubectl apply -f -
+kubectl -n omni-observer create serviceaccount omni-reader --dry-run=client -o yaml | kubectl apply -f -
+```
+
+Create the Secret with this shape:
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: omni-reader-token
+  namespace: omni-observer
+  annotations:
+    kubernetes.io/service-account.name: omni-reader
+type: kubernetes.io/service-account-token
+```
+
+The VM collector connects to the Kubernetes API with HTTPS, the bearer token,
+and a trusted cluster CA. Plain HTTP is not supported.
 
 RBAC checks:
 
 ```bash
-kubectl auth can-i list nodes --as=system:serviceaccount:omni:omni-reader
-kubectl auth can-i list namespaces --as=system:serviceaccount:omni:omni-reader
-kubectl auth can-i list pods --all-namespaces --as=system:serviceaccount:omni:omni-reader
-kubectl auth can-i list services --all-namespaces --as=system:serviceaccount:omni:omni-reader
-kubectl auth can-i list persistentvolumeclaims --all-namespaces --as=system:serviceaccount:omni:omni-reader
-kubectl auth can-i list deployments.apps --all-namespaces --as=system:serviceaccount:omni:omni-reader
-kubectl auth can-i list ingresses.networking.k8s.io --all-namespaces --as=system:serviceaccount:omni:omni-reader
-kubectl auth can-i list nodes.metrics.k8s.io --as=system:serviceaccount:omni:omni-reader
-```
-
-Smoke checks:
-
-```bash
-kubectl -n omni get deploy,pod,svc,ingress
-kubectl -n omni logs deploy/omni
-curl -fsS http://omni.internal/api/health/ready
-curl -fsS http://omni.internal/api/collect/snapshot
+kubectl auth can-i list nodes --as=system:serviceaccount:omni-observer:omni-reader
+kubectl auth can-i list namespaces --as=system:serviceaccount:omni-observer:omni-reader
+kubectl auth can-i list pods --all-namespaces --as=system:serviceaccount:omni-observer:omni-reader
+kubectl auth can-i list services --all-namespaces --as=system:serviceaccount:omni-observer:omni-reader
+kubectl auth can-i list persistentvolumeclaims --all-namespaces --as=system:serviceaccount:omni-observer:omni-reader
+kubectl auth can-i list deployments.apps --all-namespaces --as=system:serviceaccount:omni-observer:omni-reader
+kubectl auth can-i list ingresses.networking.k8s.io --all-namespaces --as=system:serviceaccount:omni-observer:omni-reader
+kubectl auth can-i list nodes.metrics.k8s.io --as=system:serviceaccount:omni-observer:omni-reader
 ```
