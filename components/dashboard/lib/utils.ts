@@ -36,6 +36,10 @@ export function statusColor(status: SourceStatus, stale?: boolean) {
     return "var(--status-ok)"
   }
 
+  if (status === "progressing") {
+    return "var(--status-progress)"
+  }
+
   if (status === "down" || status === "permission_error") {
     return "var(--status-down)"
   }

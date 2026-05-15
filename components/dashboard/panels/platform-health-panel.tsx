@@ -55,7 +55,9 @@ export function PlatformHealthPanel({ snapshot }: { snapshot: DashboardSnapshot 
           <TableBody>
             {sources.map(({ key, envelope }) => {
               const isAlive =
-                envelope.status === "ok" || envelope.status === "stale"
+                envelope.status === "ok" ||
+                envelope.status === "progressing" ||
+                envelope.status === "stale"
               return (
                 <TableRow key={key}>
                   <TableCell className="font-medium">

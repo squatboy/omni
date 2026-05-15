@@ -17,6 +17,7 @@ export const sourceLabels: Record<CollectSource, string> = {
 
 export const statusLabels: Record<SourceStatus, string> = {
   ok: "OK",
+  progressing: "PROGRESSING",
   down: "DOWN",
   timeout: "TIMEOUT",
   permission_error: "PERMISSION",

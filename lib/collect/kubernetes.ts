@@ -27,6 +27,12 @@ type K8sOwnerReference = {
   controller?: boolean
 }
 
+type K8sCondition = {
+  type?: string
+  status?: string
+  reason?: string
+}
+
 type K8sNode = {
   metadata?: K8sMeta
   status?: {
@@ -51,7 +57,12 @@ type K8sDeployment = {
     replicas?: number
   }
   status?: {
+    replicas?: number
     readyReplicas?: number
+    updatedReplicas?: number
+    availableReplicas?: number
+    unavailableReplicas?: number
+    conditions?: K8sCondition[]
   }
 }
 
@@ -61,7 +72,11 @@ type K8sDaemonSet = {
   metadata?: K8sMeta
   status?: {
     desiredNumberScheduled?: number
+    currentNumberScheduled?: number
     numberReady?: number
+    updatedNumberScheduled?: number
+    numberAvailable?: number
+    numberUnavailable?: number
   }
 }
 
@@ -329,10 +344,14 @@ export async function collectKubernetes(
     ).length
 
     const notReadyPods = Math.max(0, pods.length - readyPods)
-    const isStale = notReadyPods > 0 || pendingPvcCount > 0
+    const hasProgressingWorkload = workloads.some(
+      (workload) => workload.progressing
+    )
+    const isStale =
+      pendingPvcCount > 0 || (notReadyPods > 0 && !hasProgressingWorkload)
 
     return {
-      status: isStale ? "stale" : "ok",
+      status: isStale ? "stale" : hasProgressingWorkload ? "progressing" : "ok",
       collectedAt,
       stale: false,
       error: null,
@@ -595,6 +614,39 @@ function toWorkload(
     kind === "daemonset"
       ? (resource as K8sDaemonSet).status?.numberReady ?? 0
       : (resource as K8sDeployment | K8sStatefulSet).status?.readyReplicas ?? 0
+  const replicas =
+    kind === "daemonset"
+      ? (resource as K8sDaemonSet).status?.currentNumberScheduled ??
+        desiredReplicas
+      : (resource as K8sDeployment | K8sStatefulSet).status?.replicas ??
+        readyReplicas
+  const updatedReplicas =
+    kind === "daemonset"
+      ? (resource as K8sDaemonSet).status?.updatedNumberScheduled ?? readyReplicas
+      : (resource as K8sDeployment | K8sStatefulSet).status?.updatedReplicas ??
+        readyReplicas
+  const availableReplicas =
+    kind === "daemonset"
+      ? (resource as K8sDaemonSet).status?.numberAvailable ?? readyReplicas
+      : (resource as K8sDeployment | K8sStatefulSet).status?.availableReplicas ??
+        readyReplicas
+  const unavailableReplicas =
+    kind === "daemonset"
+      ? (resource as K8sDaemonSet).status?.numberUnavailable ?? 0
+      : (resource as K8sDeployment | K8sStatefulSet).status
+          ?.unavailableReplicas ?? 0
+  const conditions =
+    kind === "daemonset"
+      ? []
+      : ((resource as K8sDeployment | K8sStatefulSet).status?.conditions ?? [])
+  const progressing = isWorkloadProgressing({
+    desiredReplicas,
+    replicas,
+    updatedReplicas,
+    availableReplicas,
+    unavailableReplicas,
+    conditions,
+  })
 
   return [
     {
@@ -603,9 +655,46 @@ function toWorkload(
       name,
       desiredReplicas,
       readyReplicas,
+      replicas,
+      updatedReplicas,
+      availableReplicas,
+      unavailableReplicas,
+      progressing,
       restartCount: restartByWorkload.get(workloadKey(namespace, kind, name)) ?? 0,
     },
   ]
+}
+
+function isWorkloadProgressing({
+  desiredReplicas,
+  replicas,
+  updatedReplicas,
+  availableReplicas,
+  unavailableReplicas,
+  conditions,
+}: {
+  desiredReplicas: number
+  replicas: number
+  updatedReplicas: number
+  availableReplicas: number
+  unavailableReplicas: number
+  conditions: K8sCondition[]
+}) {
+  if (desiredReplicas === 0) {
+    return false
+  }
+
+  if (updatedReplicas < desiredReplicas || replicas > desiredReplicas) {
+    return true
+  }
+
+  return conditions.some(
+    (condition) =>
+      condition.type === "Progressing" &&
+      condition.status?.toLowerCase() === "true" &&
+      condition.reason !== "NewReplicaSetAvailable" &&
+      (availableReplicas < desiredReplicas || unavailableReplicas > 0)
+  )
 }
 
 function createNodeUsageMap(metrics: K8sNodeMetric[]): Map<string, K8sResourceUsage> {

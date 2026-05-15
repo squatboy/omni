@@ -81,6 +81,7 @@
     --sidebar-border: oklch(0.922 0 0);
     --sidebar-ring: oklch(0.708 0 0);
     --status-ok: oklch(0.75 0.18 145);
+    --status-progress: oklch(0.68 0.16 245);
     --status-down: oklch(0.65 0.21 25);
     --status-warn: oklch(0.8 0.15 80);
     --status-muted: oklch(0.6 0 0);
@@ -119,6 +120,7 @@
     --sidebar-border: oklch(1 0 0 / 10%);
     --sidebar-ring: oklch(0.556 0 0);
     --status-ok: oklch(0.75 0.18 145);
+    --status-progress: oklch(0.72 0.15 245);
     --status-down: oklch(0.65 0.21 25);
     --status-warn: oklch(0.8 0.15 80);
     --status-muted: oklch(0.6 0 0);

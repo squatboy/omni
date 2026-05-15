@@ -58,13 +58,25 @@ export function ArgoPanel({
                 </TableCell>
                 <TableCell>
                   <StatusBadge
-                    status={app.syncStatus === "Synced" ? "ok" : "stale"}
+                    status={
+                      app.syncStatus === "Synced"
+                        ? "ok"
+                        : app.healthStatus === "Progressing"
+                          ? "progressing"
+                          : "stale"
+                    }
                     label={app.syncStatus}
                   />
                 </TableCell>
                 <TableCell>
                   <StatusBadge
-                    status={app.healthStatus === "Healthy" ? "ok" : "stale"}
+                    status={
+                      app.healthStatus === "Healthy"
+                        ? "ok"
+                        : app.healthStatus === "Progressing"
+                          ? "progressing"
+                          : "stale"
+                    }
                     label={app.healthStatus}
                   />
                 </TableCell>

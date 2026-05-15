@@ -54,7 +54,7 @@ describe("collectArgoCd", () => {
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
-  it("collects Argo CD application sync and health states", async () => {
+  it("returns progressing when an OutOfSync application is still progressing", async () => {
     process.env.ARGOCD_TOKEN = "argo-token"
     fetchMock.mockResolvedValue(
       jsonResponse({
@@ -79,7 +79,7 @@ describe("collectArgoCd", () => {
 
     const result = await collectArgoCd(new AbortController().signal)
 
-    expect(result.status).toBe("stale")
+    expect(result.status).toBe("progressing")
     expect(result.error).toBeNull()
     expect(result.data.applications).toHaveLength(2)
     expect(result.data.applications[0]).toMatchObject({
@@ -98,6 +98,55 @@ describe("collectArgoCd", () => {
       healthStatus: "Progressing",
       revision: null,
     })
+  })
+
+  it("returns stale for degraded or unknown application states", async () => {
+    process.env.ARGOCD_TOKEN = "argo-token"
+    fetchMock.mockResolvedValue(
+      jsonResponse({
+        items: [
+          {
+            metadata: { name: "api", namespace: "argocd" },
+            status: {
+              sync: { status: "Synced" },
+              health: { status: "Degraded" },
+            },
+          },
+          {
+            metadata: { name: "worker", namespace: "argocd" },
+            status: {
+              sync: { status: "Unknown" },
+              health: { status: "Unknown" },
+            },
+          },
+        ],
+      })
+    )
+
+    const result = await collectArgoCd(new AbortController().signal)
+
+    expect(result.status).toBe("stale")
+  })
+
+  it("returns ok when every application is synced and healthy", async () => {
+    process.env.ARGOCD_TOKEN = "argo-token"
+    fetchMock.mockResolvedValue(
+      jsonResponse({
+        items: [
+          {
+            metadata: { name: "omni", namespace: "argocd" },
+            status: {
+              sync: { status: "Synced" },
+              health: { status: "Healthy" },
+            },
+          },
+        ],
+      })
+    )
+
+    const result = await collectArgoCd(new AbortController().signal)
+
+    expect(result.status).toBe("ok")
   })
 
   it("maps HTTP 403 to permission_error", async () => {

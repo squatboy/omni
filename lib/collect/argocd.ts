@@ -88,13 +88,16 @@ export async function collectArgoCd(
 
     const isStale = applications.some(
       (app) =>
-        app.syncStatus !== "Synced" ||
         app.healthStatus === "Degraded" ||
-        app.healthStatus === "Unknown"
+        app.healthStatus === "Unknown" ||
+        (app.syncStatus !== "Synced" && app.healthStatus !== "Progressing")
+    )
+    const isProgressing = applications.some(
+      (app) => app.healthStatus === "Progressing"
     )
 
     return {
-      status: isStale ? "stale" : "ok",
+      status: isStale ? "stale" : isProgressing ? "progressing" : "ok",
       collectedAt,
       stale: false,
       error: null,

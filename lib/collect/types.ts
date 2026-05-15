@@ -8,6 +8,7 @@ export type CollectSource =
 
 export type SourceStatus =
   | "ok"
+  | "progressing"
   | "down"
   | "timeout"
   | "permission_error"
@@ -93,6 +94,11 @@ export type KubernetesWorkloadStatus = {
   name: string
   readyReplicas: number
   desiredReplicas: number
+  replicas: number
+  updatedReplicas: number
+  availableReplicas: number
+  unavailableReplicas: number
+  progressing: boolean
   restartCount: number
 }
 

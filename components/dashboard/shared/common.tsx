@@ -4,8 +4,12 @@ import { ExternalLink } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
-import type { OverviewData } from "@/lib/collect/types"
-import { StatusDot } from "./status-badge"
+import type {
+  KubernetesWorkloadStatus,
+  OverviewData,
+  SourceStatus,
+} from "@/lib/collect/types"
+import { StatusBadge, StatusDot } from "./status-badge"
 
 export function ResourceBar({
   label,
@@ -68,4 +72,55 @@ export function HealthBadge({
       {health}
     </Badge>
   )
+}
+
+export function WorkloadStatusBadge({
+  workload,
+}: {
+  workload: KubernetesWorkloadStatus
+}) {
+  return (
+    <div className="flex flex-col items-start gap-1">
+      <StatusBadge
+        status={workloadStatus(workload)}
+        label={
+          workload.progressing
+            ? "Progressing"
+            : `${workload.readyReplicas}/${workload.desiredReplicas}`
+        }
+      />
+      {workload.progressing ? (
+        <span className="font-mono text-xs text-muted-foreground">
+          ready {workload.readyReplicas}/{workload.desiredReplicas}
+        </span>
+      ) : null}
+    </div>
+  )
+}
+
+export function WorkloadRolloutDetail({
+  workload,
+}: {
+  workload: KubernetesWorkloadStatus
+}) {
+  return (
+    <div className="flex min-w-36 flex-col gap-1 font-mono text-xs">
+      <span>
+        updated {workload.updatedReplicas}/{workload.desiredReplicas}; pods{" "}
+        {workload.replicas}
+      </span>
+      <span className="text-muted-foreground">
+        available {workload.availableReplicas}; unavailable{" "}
+        {workload.unavailableReplicas}
+      </span>
+    </div>
+  )
+}
+
+function workloadStatus(workload: KubernetesWorkloadStatus): SourceStatus {
+  if (workload.progressing) {
+    return "progressing"
+  }
+
+  return workload.readyReplicas === workload.desiredReplicas ? "ok" : "stale"
 }

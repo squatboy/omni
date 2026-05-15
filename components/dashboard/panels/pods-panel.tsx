@@ -17,6 +17,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import type { CollectEnvelope, KubernetesData } from "@/lib/collect/types"
+import { WorkloadRolloutDetail, WorkloadStatusBadge } from "../shared/common"
 import { StatusBadge } from "../shared/status-badge"
 
 export function PodsPanel({
@@ -45,6 +46,7 @@ export function PodsPanel({
               <TableHead>Namespace</TableHead>
               <TableHead>App Workload</TableHead>
               <TableHead>Readiness</TableHead>
+              <TableHead>Rollout</TableHead>
               <TableHead>Restart Count</TableHead>
             </TableRow>
           </TableHeader>
@@ -65,14 +67,10 @@ export function PodsPanel({
                   </div>
                 </TableCell>
                 <TableCell>
-                  <StatusBadge
-                    status={
-                      workload.readyReplicas === workload.desiredReplicas
-                        ? "ok"
-                        : "stale"
-                    }
-                    label={`${workload.readyReplicas}/${workload.desiredReplicas}`}
-                  />
+                  <WorkloadStatusBadge workload={workload} />
+                </TableCell>
+                <TableCell>
+                  <WorkloadRolloutDetail workload={workload} />
                 </TableCell>
                 <TableCell className="font-mono">
                   {workload.restartCount}

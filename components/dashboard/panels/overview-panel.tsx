@@ -19,7 +19,11 @@ import {
 import { sourceLabels } from "../lib/constants"
 import type { DashboardSnapshot } from "../lib/types"
 import { formatDateTime } from "../lib/utils"
-import { ExternalLinkButton } from "../shared/common"
+import {
+  ExternalLinkButton,
+  WorkloadRolloutDetail,
+  WorkloadStatusBadge,
+} from "../shared/common"
 import { StatusBadge, StatusDot } from "../shared/status-badge"
 
 export function OverviewPanel({ snapshot }: { snapshot: DashboardSnapshot }) {
@@ -48,6 +52,7 @@ export function OverviewPanel({ snapshot }: { snapshot: DashboardSnapshot }) {
                 <TableHead>Namespace</TableHead>
                 <TableHead>Workload</TableHead>
                 <TableHead>Ready</TableHead>
+                <TableHead>Rollout</TableHead>
                 <TableHead>Restarts</TableHead>
               </TableRow>
             </TableHeader>
@@ -68,14 +73,10 @@ export function OverviewPanel({ snapshot }: { snapshot: DashboardSnapshot }) {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <StatusBadge
-                      status={
-                        workload.readyReplicas === workload.desiredReplicas
-                          ? "ok"
-                          : "stale"
-                      }
-                      label={`${workload.readyReplicas}/${workload.desiredReplicas}`}
-                    />
+                    <WorkloadStatusBadge workload={workload} />
+                  </TableCell>
+                  <TableCell>
+                    <WorkloadRolloutDetail workload={workload} />
                   </TableCell>
                   <TableCell className="font-mono">
                     {workload.restartCount}

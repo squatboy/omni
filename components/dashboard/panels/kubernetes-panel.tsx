@@ -17,7 +17,11 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import type { CollectEnvelope, KubernetesData } from "@/lib/collect/types"
-import { ResourceBar } from "../shared/common"
+import {
+  ResourceBar,
+  WorkloadRolloutDetail,
+  WorkloadStatusBadge,
+} from "../shared/common"
 import { StatusBadge } from "../shared/status-badge"
 
 export function KubernetesPanel({
@@ -81,6 +85,7 @@ export function KubernetesPanel({
                 <TableHead>Namespace</TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Ready</TableHead>
+                <TableHead>Rollout</TableHead>
                 <TableHead>Restarts</TableHead>
               </TableRow>
             </TableHeader>
@@ -101,14 +106,10 @@ export function KubernetesPanel({
                     </div>
                   </TableCell>
                   <TableCell>
-                    <StatusBadge
-                      status={
-                        workload.readyReplicas === workload.desiredReplicas
-                          ? "ok"
-                          : "stale"
-                      }
-                      label={`${workload.readyReplicas}/${workload.desiredReplicas}`}
-                    />
+                    <WorkloadStatusBadge workload={workload} />
+                  </TableCell>
+                  <TableCell>
+                    <WorkloadRolloutDetail workload={workload} />
                   </TableCell>
                   <TableCell className="font-mono">
                     {workload.restartCount}
