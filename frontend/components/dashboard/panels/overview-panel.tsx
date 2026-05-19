@@ -31,8 +31,8 @@ export function OverviewPanel({ snapshot }: { snapshot: DashboardSnapshot }) {
   const projects = snapshot.gitlab.data.projects
 
   return (
-    <div className="grid gap-4 xl:grid-cols-[1.35fr_1fr]">
-      <Card size="sm" className="rounded-md">
+    <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(20rem,1fr)]">
+      <Card size="sm" className="min-w-0 rounded-md">
         <CardHeader>
           <CardTitle>Workload Readiness</CardTitle>
           <CardDescription>
@@ -45,29 +45,29 @@ export function OverviewPanel({ snapshot }: { snapshot: DashboardSnapshot }) {
             />
           </CardAction>
         </CardHeader>
-        <CardContent>
-          <Table>
+        <CardContent className="min-w-0">
+          <Table className="table-fixed">
             <TableHeader>
               <TableRow>
-                <TableHead>Namespace</TableHead>
-                <TableHead>Workload</TableHead>
-                <TableHead>Ready</TableHead>
-                <TableHead>Rollout</TableHead>
-                <TableHead>Restarts</TableHead>
+                <TableHead className="w-[18%]">Namespace</TableHead>
+                <TableHead className="w-[27%]">Workload</TableHead>
+                <TableHead className="w-[17%]">Ready</TableHead>
+                <TableHead className="w-[28%]">Rollout</TableHead>
+                <TableHead className="w-[10%]">Restarts</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {workloads.map((workload) => (
                 <TableRow key={`${workload.namespace}-${workload.name}`}>
                   <TableCell className="font-mono text-xs">
-                    {workload.namespace}
+                    <span className="block truncate">{workload.namespace}</span>
                   </TableCell>
-                  <TableCell>
-                    <div className="flex min-w-48 flex-col gap-1">
+                  <TableCell className="min-w-0">
+                    <div className="flex min-w-0 flex-col gap-1">
                       <span className="truncate font-medium">
                         {workload.name}
                       </span>
-                      <span className="text-xs text-muted-foreground">
+                      <span className="truncate text-xs text-muted-foreground">
                         {workload.kind}
                       </span>
                     </div>
@@ -75,7 +75,7 @@ export function OverviewPanel({ snapshot }: { snapshot: DashboardSnapshot }) {
                   <TableCell>
                     <WorkloadStatusBadge workload={workload} />
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="whitespace-normal">
                     <WorkloadRolloutDetail workload={workload} />
                   </TableCell>
                   <TableCell className="font-mono">

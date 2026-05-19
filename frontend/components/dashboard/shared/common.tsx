@@ -104,7 +104,7 @@ export function WorkloadRolloutDetail({
   workload: KubernetesWorkloadStatus
 }) {
   return (
-    <div className="flex min-w-36 flex-col gap-1 font-mono text-xs">
+    <div className="flex min-w-0 flex-col gap-1 font-mono text-xs">
       <span>
         updated {workload.updatedReplicas}/{workload.desiredReplicas}; pods{" "}
         {workload.replicas}
