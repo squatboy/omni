@@ -55,6 +55,15 @@ type CollectEnvelope[T any] struct {
 	Data        T             `json:"data"`
 }
 
+type DashboardSnapshot struct {
+	Overview   CollectEnvelope[OverviewData]   `json:"overview"`
+	VMs        CollectEnvelope[VmsData]        `json:"vms"`
+	Kubernetes CollectEnvelope[KubernetesData] `json:"kubernetes"`
+	ArgoCD     CollectEnvelope[ArgoCdData]     `json:"argocd"`
+	GitLab     CollectEnvelope[GitLabData]     `json:"gitlab"`
+	Nexus      CollectEnvelope[NexusData]      `json:"nexus"`
+}
+
 type SourceSummary struct {
 	Source      CollectSource `json:"source"`
 	Status      SourceStatus  `json:"status"`

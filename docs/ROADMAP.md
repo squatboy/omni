@@ -10,7 +10,7 @@
 ## 전제
 
 - **구조**: Go 백엔드(API/Collector) + Next.js 프론트엔드 분리 구조.
-- 화면은 Next.js에서 제공하며, 백엔드 API 호출은 Next.js `rewrites` 프록시를 통해 Go 서버(8080)로 전달된다.
+- 화면은 Next.js에서 제공하며, `/api/collect/snapshot` 호출은 Next.js `rewrites` 프록시를 통해 Go 서버(8080)로 전달된다.
 - v1은 단일 replica + Go 백엔드의 in-memory snapshot cache 전제로 시작한다.
 - 앱은 Kubernetes cluster 외부 VM에 Docker Compose로 배포한다.
 - 실제 inventory는 Git에 넣지 않는 local `config/inventory.json`으로 관리하고, repo에는 `config/inventory.example.json`만 추적한다.
@@ -59,7 +59,7 @@
 
 - 상태: 완료 (`2026-05-19`)
 - 고성능 및 동시성 처리를 위해 기존 TypeScript 백엔드 logic을 Go로 이관.
-- Go Gin 프레임워크 기반 API 서버 및 background collector 구현.
+- Go Gin 프레임워크 기반 API 서버, background collector, 단일 snapshot API 구현.
 - Next.js `rewrites`를 통한 API 프록시 설정.
 - Docker Compose 구조를 Multi-container(frontend, backend)로 변경.
 

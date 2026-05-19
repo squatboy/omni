@@ -98,6 +98,19 @@ func (c *Cache) GetOverview() models.CollectEnvelope[models.OverviewData] {
 	return c.overview
 }
 
+func (c *Cache) GetSnapshot() models.DashboardSnapshot {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return models.DashboardSnapshot{
+		Overview:   c.overview,
+		VMs:        c.vms,
+		Kubernetes: c.kubernetes,
+		ArgoCD:     c.argocd,
+		GitLab:     c.gitlab,
+		Nexus:      c.nexus,
+	}
+}
+
 // updateOverview calculates the overview health and data. Assumes c.mu is already locked.
 func (c *Cache) updateOverview() {
 	now := time.Now().Format(time.RFC3339)

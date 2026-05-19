@@ -32,7 +32,7 @@ func main() {
 	log.Println("Starting collector runner...")
 	runner.Start(ctx)
 
-	router := api.SetupRouter(cache)
+	router := api.SetupRouter(cache, runner)
 
 	srv := &http.Server{
 		Addr:    ":" + cfg.Port,

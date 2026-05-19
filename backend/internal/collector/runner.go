@@ -3,6 +3,7 @@ package collector
 import (
 	"context"
 	"omni-backend/internal/config"
+	"sync"
 	"time"
 )
 
@@ -34,6 +35,34 @@ func (r *Runner) Start(ctx context.Context) {
 	go r.runLoop(ctx, "kubernetes", 30*time.Second, func(ctx context.Context) {
 		r.cache.SetKubernetes(CollectKubernetes(ctx, r.config))
 	})
+}
+
+func (r *Runner) CollectOnce(ctx context.Context) {
+	var wg sync.WaitGroup
+	wg.Add(5)
+
+	go func() {
+		defer wg.Done()
+		r.cache.SetVMs(CollectVMs(ctx, r.config))
+	}()
+	go func() {
+		defer wg.Done()
+		r.cache.SetNexus(CollectNexus(ctx, r.config))
+	}()
+	go func() {
+		defer wg.Done()
+		r.cache.SetArgoCD(CollectArgoCD(ctx, r.config))
+	}()
+	go func() {
+		defer wg.Done()
+		r.cache.SetGitLab(CollectGitLab(ctx, r.config))
+	}()
+	go func() {
+		defer wg.Done()
+		r.cache.SetKubernetes(CollectKubernetes(ctx, r.config))
+	}()
+
+	wg.Wait()
 }
 
 func (r *Runner) runLoop(ctx context.Context, name string, interval time.Duration, collectFn func(context.Context)) {
