@@ -21,7 +21,7 @@ func LoadConfig() (*AppConfig, error) {
 
 	inventoryPath := os.Getenv("INVENTORY_PATH")
 	if inventoryPath == "" {
-		inventoryPath = "../config/inventory.example.json"
+		inventoryPath = "../deploy/config/inventory.example.json"
 	}
 
 	cfg := &AppConfig{

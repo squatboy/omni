@@ -42,7 +42,6 @@ pnpm-debug.log*
 .env*.local
 
 # local inventory
-/config/inventory.json
 
 # typescript
 *.tsbuildinfo

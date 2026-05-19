@@ -54,7 +54,7 @@ mkdir -p config
 vi config/inventory.json
 ```
 
-Use `config/inventory.example.json` from the repository as the starting template when preparing the deploy bundle.
+Use `deploy/config/inventory.example.json` from the repository as the starting template when preparing the deploy bundle.
 
 **3. Set Up Kubernetes Credentials**
 

@@ -11,5 +11,4 @@ npm-debug.log*
 Dockerfile
 .env
 .env*.local
-config/inventory.json
 *.tsbuildinfo

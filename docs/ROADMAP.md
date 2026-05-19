@@ -13,7 +13,7 @@
 - 화면은 Next.js에서 제공하며, `/api/collect/snapshot` 호출은 Next.js `rewrites` 프록시를 통해 Go 서버(8080)로 전달된다.
 - v1은 단일 replica + Go 백엔드의 in-memory snapshot cache 전제로 시작한다.
 - 앱은 Kubernetes cluster 외부 VM에 Docker Compose로 배포한다.
-- 실제 inventory는 Git에 넣지 않는 local `config/inventory.json`으로 관리하고, repo에는 `config/inventory.example.json`만 추적한다.
+- 실제 inventory는 Git에 넣지 않는 local `deploy/config/inventory.json`으로 관리하고, repo에는 `deploy/config/inventory.example.json`만 추적한다.
 - credential은 Git에 넣지 않고 VM `deploy/.env` 및 secret mount로만 주입한다.
 - 프론트엔드/백엔드 배포 image는 같은 GHCR version tag를 사용한다.
 - CI는 PR/main push에서 검증만 수행하고, `v*` Git tag push에서 frontend/backend image publish를 수행한다.
