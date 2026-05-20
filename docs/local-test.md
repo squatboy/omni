@@ -68,7 +68,30 @@ docker-compose --env-file .env.local up -d
 4. `Manage > Integrations`에서 외부 시스템 credential 등록
 5. 각 integration의 `Test connection` 실행
 
-## 6. 종료 및 정리
+## 6. 프론트 개발용 mock 모드 (npm run dev)
+
+백엔드 없이 특정 화면/탭을 빠르게 상호작용 테스트할 때 사용합니다.
+
+```bash
+cd frontend
+NEXT_PUBLIC_OMNI_MOCK=true npm run dev
+```
+
+또는 `frontend/.env.local`에 다음 값을 추가합니다.
+
+```env
+NEXT_PUBLIC_OMNI_MOCK=true
+```
+
+옵션:
+- `?mock=1` 쿼리로도 mock 모드를 켤 수 있습니다.
+- `?view=manage` 같은 쿼리로 원하는 화면으로 바로 진입할 수 있습니다.
+
+주의:
+- mock 모드는 **개발 환경에서만** 동작하며 Docker build/프로덕션 빌드에는 영향이 없습니다.
+- mock 데이터는 메모리에서만 유지되므로 새로고침 시 초기화됩니다.
+
+## 7. 종료 및 정리
 
 ```bash
 docker-compose down

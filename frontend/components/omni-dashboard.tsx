@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { cn } from "@/lib/utils"
 import { api } from "@/lib/api"
+import { getMockViewParam, isMockMode, mockUser } from "@/lib/mock"
 import type { User } from "@/lib/types"
 import {
   SidebarInset,
@@ -24,14 +25,42 @@ import { DashboardContent } from "./dashboard/shared/dashboard-content"
 import { DashboardSkeleton } from "./dashboard/shared/dashboard-skeleton"
 import { ManagePanel } from "./manage-panel"
 
+const appViews: AppView[] = [
+  "overview",
+  "health",
+  "kubernetes",
+  "pods",
+  "vms",
+  "argocd",
+  "gitlab",
+  "nexus",
+  "manage",
+]
+
+function resolveInitialView(mockMode: boolean): AppView {
+  if (!mockMode) {
+    return "overview"
+  }
+  const candidate = getMockViewParam()
+  if (candidate && appViews.includes(candidate as AppView)) {
+    return candidate as AppView
+  }
+  return "overview"
+}
+
 export function OmniDashboard() {
-  const [authLoading, setAuthLoading] = React.useState(true)
+  const mockMode = isMockMode()
+  const [authLoading, setAuthLoading] = React.useState(!mockMode)
   const [setupRequired, setSetupRequired] = React.useState(false)
-  const [user, setUser] = React.useState<User | null>(null)
+  const [user, setUser] = React.useState<User | null>(
+    mockMode ? mockUser : null
+  )
   const [snapshot, setSnapshot] = React.useState<DashboardSnapshot | null>(null)
   const [error, setError] = React.useState<string | null>(null)
   const [isRefreshing, setIsRefreshing] = React.useState(false)
-  const [activeView, setActiveView] = React.useState<AppView>("overview")
+  const [activeView, setActiveView] = React.useState<AppView>(() =>
+    resolveInitialView(mockMode)
+  )
   const [pollKey, setPollKey] = React.useState(0)
   const [lastUiRefreshAt, setLastUiRefreshAt] = React.useState<string | null>(
     null
@@ -62,6 +91,9 @@ export function OmniDashboard() {
   )
 
   React.useEffect(() => {
+    if (mockMode) {
+      return
+    }
     void api
       .me()
       .then((me) => {
@@ -71,8 +103,8 @@ export function OmniDashboard() {
       .catch(() => {
         setUser(null)
       })
-      .finally(() => setAuthLoading(false))
-  }, [])
+       .finally(() => setAuthLoading(false))
+   }, [mockMode])
 
   React.useEffect(() => {
     const initialId = window.setTimeout(() => {
@@ -151,7 +183,9 @@ export function OmniDashboard() {
                 variant="outline"
                 size="sm"
                 onClick={() => {
-                  void api.logout().finally(() => setUser(null))
+                  void api
+                    .logout()
+                    .finally(() => setUser(mockMode ? mockUser : null))
                 }}
               >
                 Logout

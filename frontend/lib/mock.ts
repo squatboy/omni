@@ -1,0 +1,466 @@
+import type { DashboardSnapshot } from "@/components/dashboard/lib/types"
+import type {
+  ArgoCdData,
+  CollectEnvelope,
+  GitLabData,
+  KubernetesData,
+  NexusData,
+  OverviewData,
+  SourceSummary,
+  VmsData,
+} from "@/lib/collect/types"
+import type {
+  ArgoCDIntegration,
+  GitLabIntegration,
+  KubernetesIntegration,
+  NexusIntegration,
+  User,
+  VMResource,
+} from "@/lib/types"
+
+const mockUserCreatedAt = new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString()
+
+export const mockUser: User = {
+  id: "user-admin",
+  username: "omni-admin",
+  role: "admin",
+  mustChangePassword: false,
+  createdAt: mockUserCreatedAt,
+  updatedAt: mockUserCreatedAt,
+}
+
+export function isMockMode() {
+  if (process.env.NODE_ENV !== "development") {
+    return false
+  }
+  if (process.env.NEXT_PUBLIC_OMNI_MOCK === "true") {
+    return true
+  }
+  if (typeof window === "undefined") {
+    return false
+  }
+  const flag = new URLSearchParams(window.location.search).get("mock")
+  return flag === "1" || flag === "true"
+}
+
+export function getMockViewParam() {
+  if (typeof window === "undefined") {
+    return null
+  }
+  return new URLSearchParams(window.location.search).get("view")
+}
+
+type MockStore = {
+  vms: VMResource[]
+  kubernetes: KubernetesIntegration[]
+  argocd: ArgoCDIntegration[]
+  gitlab: GitLabIntegration[]
+  nexus: NexusIntegration[]
+  users: User[]
+}
+
+let mockStore: MockStore | null = null
+
+export function getMockStore(): MockStore {
+  if (!mockStore) {
+    mockStore = createDefaultMockStore()
+  }
+  return mockStore
+}
+
+function createDefaultMockStore(): MockStore {
+  const createdAt = mockUserCreatedAt
+  const updatedAt = mockUserCreatedAt
+
+  return {
+    vms: [
+      {
+        id: "vm-bastion",
+        name: "bastion",
+        address: "10.40.0.12",
+        description: "Shared access node",
+        link: "https://bastion.local",
+        active: true,
+      },
+      {
+        id: "vm-build",
+        name: "ci-runner",
+        address: "10.40.0.21",
+        description: "Pipeline executor",
+        link: null,
+        active: true,
+      },
+    ],
+    kubernetes: [
+      {
+        id: "k8s-primary",
+        name: "Primary Cluster",
+        apiUrl: "https://k8s.local",
+        namespaces: ["platform", "apps"],
+        active: true,
+        tokenConfigured: true,
+      },
+    ],
+    argocd: [
+      {
+        id: "argocd-main",
+        name: "Main ArgoCD",
+        baseUrl: "https://argocd.local",
+        active: true,
+        tokenConfigured: true,
+      },
+    ],
+    gitlab: [
+      {
+        id: "gitlab-main",
+        name: "Omni GitLab",
+        baseUrl: "https://gitlab.local",
+        projects: [
+          {
+            id: "gitlab-omni-ui",
+            name: "omni-ui",
+            path: "platform/omni-ui",
+            defaultBranch: "main",
+            link: "https://gitlab.local/platform/omni-ui",
+            active: true,
+          },
+          {
+            id: "gitlab-omni-api",
+            name: "omni-api",
+            path: "platform/omni-api",
+            defaultBranch: "main",
+            link: "https://gitlab.local/platform/omni-api",
+            active: true,
+          },
+        ],
+        active: true,
+        tokenConfigured: true,
+      },
+    ],
+    nexus: [
+      {
+        id: "nexus-main",
+        name: "Nexus Core",
+        url: "https://nexus.local",
+        active: true,
+      },
+    ],
+    users: [
+      mockUser,
+      {
+        id: "user-viewer",
+        username: "omni-viewer",
+        role: "viewer",
+        mustChangePassword: true,
+        createdAt,
+        updatedAt,
+      },
+    ],
+  }
+}
+
+export function createMockSnapshot(): DashboardSnapshot {
+  const now = new Date()
+  const nowIso = now.toISOString()
+  const twoMinutesAgo = new Date(now.getTime() - 2 * 60 * 1000).toISOString()
+  const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000).toISOString()
+  const tenMinutesAgo = new Date(now.getTime() - 10 * 60 * 1000).toISOString()
+
+  const overviewSources: SourceSummary[] = [
+    {
+      source: "kubernetes",
+      status: "ok",
+      attemptedAt: nowIso,
+      collectedAt: nowIso,
+      stale: false,
+      error: null,
+    },
+    {
+      source: "vms",
+      status: "ok",
+      attemptedAt: twoMinutesAgo,
+      collectedAt: twoMinutesAgo,
+      stale: false,
+      error: null,
+    },
+    {
+      source: "argocd",
+      status: "progressing",
+      attemptedAt: fiveMinutesAgo,
+      collectedAt: fiveMinutesAgo,
+      stale: false,
+      error: null,
+    },
+    {
+      source: "gitlab",
+      status: "stale",
+      attemptedAt: tenMinutesAgo,
+      collectedAt: tenMinutesAgo,
+      stale: true,
+      error: null,
+    },
+    {
+      source: "nexus",
+      status: "down",
+      attemptedAt: nowIso,
+      collectedAt: tenMinutesAgo,
+      stale: false,
+      error: { code: "CONNECTION_FAILED", message: "Connection refused" },
+    },
+  ]
+
+  const overview: CollectEnvelope<OverviewData, "overview"> = {
+    source: "overview",
+    status: "ok",
+    attemptedAt: nowIso,
+    collectedAt: nowIso,
+    stale: false,
+    error: null,
+    data: {
+      health: "degraded",
+      generatedAt: nowIso,
+      sources: overviewSources,
+    },
+  }
+
+  const kubernetesData: KubernetesData = {
+    name: "omni-prod",
+    nodes: [
+      {
+        integrationName: "Primary Cluster",
+        name: "k8s-node-1",
+        ready: true,
+        cpuUsagePercent: 42,
+        memoryUsagePercent: 61,
+      },
+      {
+        integrationName: "Primary Cluster",
+        name: "k8s-node-2",
+        ready: false,
+        cpuUsagePercent: 78,
+        memoryUsagePercent: 84,
+      },
+    ],
+    namespaces: ["platform", "apps", "default"],
+    workloads: [
+      {
+        integrationName: "Primary Cluster",
+        namespace: "platform",
+        kind: "deployment",
+        name: "omni-api",
+        readyReplicas: 3,
+        desiredReplicas: 3,
+        replicas: 3,
+        updatedReplicas: 3,
+        availableReplicas: 3,
+        unavailableReplicas: 0,
+        progressing: false,
+        restartCount: 1,
+      },
+      {
+        integrationName: "Primary Cluster",
+        namespace: "apps",
+        kind: "statefulset",
+        name: "gitlab-runner",
+        readyReplicas: 1,
+        desiredReplicas: 1,
+        replicas: 1,
+        updatedReplicas: 1,
+        availableReplicas: 1,
+        unavailableReplicas: 0,
+        progressing: false,
+        restartCount: 0,
+      },
+      {
+        integrationName: "Primary Cluster",
+        namespace: "apps",
+        kind: "deployment",
+        name: "metrics-gateway",
+        readyReplicas: 1,
+        desiredReplicas: 2,
+        replicas: 2,
+        updatedReplicas: 2,
+        availableReplicas: 1,
+        unavailableReplicas: 1,
+        progressing: true,
+        restartCount: 3,
+      },
+    ],
+    pods: {
+      total: 86,
+      ready: 79,
+      notReady: 5,
+      restarting: 2,
+    },
+    services: {
+      total: 24,
+    },
+    ingresses: {
+      total: 4,
+      hosts: ["omni.local", "grafana.local"],
+    },
+    pvcs: {
+      total: 12,
+      bound: 11,
+      pending: 1,
+    },
+  }
+
+  const kubernetes: CollectEnvelope<KubernetesData, "kubernetes"> = {
+    source: "kubernetes",
+    status: "ok",
+    attemptedAt: nowIso,
+    collectedAt: nowIso,
+    stale: false,
+    error: null,
+    data: kubernetesData,
+  }
+
+  const vms: CollectEnvelope<VmsData, "vms"> = {
+    source: "vms",
+    status: "ok",
+    attemptedAt: twoMinutesAgo,
+    collectedAt: twoMinutesAgo,
+    stale: false,
+    error: null,
+    data: {
+      items: [
+        {
+          id: "vm-bastion",
+          name: "bastion",
+          address: "10.40.0.12",
+          description: "Shared access node",
+          link: "https://bastion.local",
+          state: "up",
+          lastCheckedAt: twoMinutesAgo,
+        },
+        {
+          id: "vm-build",
+          name: "ci-runner",
+          address: "10.40.0.21",
+          description: "Pipeline executor",
+          state: "down",
+          lastCheckedAt: fiveMinutesAgo,
+        },
+      ],
+    },
+  }
+
+  const argocd: CollectEnvelope<ArgoCdData, "argocd"> = {
+    source: "argocd",
+    status: "progressing",
+    attemptedAt: fiveMinutesAgo,
+    collectedAt: fiveMinutesAgo,
+    stale: false,
+    error: null,
+    data: {
+      applications: [
+        {
+          integrationName: "Main ArgoCD",
+          name: "omni-api",
+          namespace: "platform",
+          syncStatus: "Synced",
+          healthStatus: "Healthy",
+          revision: "main@58fd2c1",
+          link: "https://argocd.local/applications/omni-api",
+        },
+        {
+          integrationName: "Main ArgoCD",
+          name: "metrics-stack",
+          namespace: "apps",
+          syncStatus: "OutOfSync",
+          healthStatus: "Progressing",
+          revision: null,
+          link: "https://argocd.local/applications/metrics-stack",
+        },
+      ],
+    },
+  }
+
+  const gitlab: CollectEnvelope<GitLabData, "gitlab"> = {
+    source: "gitlab",
+    status: "stale",
+    attemptedAt: tenMinutesAgo,
+    collectedAt: tenMinutesAgo,
+    stale: true,
+    error: null,
+    data: {
+      projects: [
+        {
+          integrationName: "Omni GitLab",
+          name: "omni-ui",
+          path: "platform/omni-ui",
+          defaultBranch: "main",
+          link: "https://gitlab.local/platform/omni-ui",
+          latestCommit: {
+            sha: "58fd2c1",
+            title: "feat: refresh dashboard layout",
+            authorName: "Dev Ops",
+            committedAt: tenMinutesAgo,
+          },
+          latestPipeline: {
+            id: 342,
+            status: "success",
+            ref: "main",
+            updatedAt: tenMinutesAgo,
+            link: "https://gitlab.local/platform/omni-ui/pipelines/342",
+          },
+        },
+        {
+          integrationName: "Omni GitLab",
+          name: "omni-api",
+          path: "platform/omni-api",
+          defaultBranch: "main",
+          link: "https://gitlab.local/platform/omni-api",
+          latestCommit: {
+            sha: "a3e1b92",
+            title: "fix: retry collector errors",
+            authorName: "SRE Team",
+            committedAt: fiveMinutesAgo,
+          },
+          latestPipeline: {
+            id: 341,
+            status: "running",
+            ref: "main",
+            updatedAt: fiveMinutesAgo,
+            link: "https://gitlab.local/platform/omni-api/pipelines/341",
+          },
+        },
+      ],
+    },
+  }
+
+  const nexus: CollectEnvelope<NexusData, "nexus"> = {
+    source: "nexus",
+    status: "down",
+    attemptedAt: nowIso,
+    collectedAt: tenMinutesAgo,
+    stale: false,
+    error: { code: "CONNECTION_FAILED", message: "Connection refused" },
+    data: {
+      items: [
+        {
+          id: "nexus-main",
+          integrationName: "Nexus Core",
+          url: "https://nexus.local",
+          reachable: false,
+          httpStatus: null,
+          checkedAt: tenMinutesAgo,
+        },
+      ],
+      url: "https://nexus.local",
+      reachable: false,
+      httpStatus: null,
+      checkedAt: tenMinutesAgo,
+    },
+  }
+
+  return {
+    overview,
+    vms,
+    kubernetes,
+    argocd,
+    gitlab,
+    nexus,
+  }
+}

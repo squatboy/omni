@@ -1,7 +1,11 @@
 import type { SourceStatus } from "@/lib/collect/types"
 import type { DashboardSnapshot } from "./types"
+import { createMockSnapshot, isMockMode } from "@/lib/mock"
 
 export async function loadSnapshot(force = false): Promise<DashboardSnapshot> {
+  if (isMockMode()) {
+    return createMockSnapshot()
+  }
   const url = force ? "/api/collect/snapshot?force=true" : "/api/collect/snapshot"
   const response = await fetch(url, { cache: "no-store" })
 
