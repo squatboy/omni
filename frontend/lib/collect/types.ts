@@ -61,7 +61,6 @@ export type VmInventoryItem = {
   name: string
   address: string
   description?: string
-  link?: string
 }
 
 export type VmPingState = "up" | "down" | "unknown"

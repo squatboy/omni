@@ -12,6 +12,7 @@ const fontMono = Geist_Mono({
 })
 
 import { TooltipProvider } from "@/components/ui/tooltip"
+import { Toaster } from "@/components/ui/sonner"
 
 export default function RootLayout({
   children,
@@ -32,6 +33,7 @@ export default function RootLayout({
       <body>
         <ThemeProvider defaultTheme="dark">
           <TooltipProvider>{children}</TooltipProvider>
+          <Toaster position="top-center" duration={5000} visibleToasts={1} />
         </ThemeProvider>
       </body>
     </html>

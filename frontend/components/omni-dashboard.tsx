@@ -49,22 +49,28 @@ function resolveInitialView(mockMode: boolean): AppView {
 }
 
 export function OmniDashboard() {
-  const mockMode = isMockMode()
-  const [authLoading, setAuthLoading] = React.useState(!mockMode)
-  const [setupRequired, setSetupRequired] = React.useState(false)
-  const [user, setUser] = React.useState<User | null>(
-    mockMode ? mockUser : null
+  const mounted = React.useSyncExternalStore(
+    React.useCallback(() => () => {}, []),
+    () => true,
+    () => false
   )
+
+  const [authLoading, setAuthLoading] = React.useState(true)
+  const [setupRequired, setSetupRequired] = React.useState(false)
+  const [user, setUser] = React.useState<User | null>(null)
   const [snapshot, setSnapshot] = React.useState<DashboardSnapshot | null>(null)
   const [error, setError] = React.useState<string | null>(null)
   const [isRefreshing, setIsRefreshing] = React.useState(false)
-  const [activeView, setActiveView] = React.useState<AppView>(() =>
-    resolveInitialView(mockMode)
-  )
+  const [activeView, setActiveView] = React.useState<AppView>("overview")
   const [pollKey, setPollKey] = React.useState(0)
   const [lastUiRefreshAt, setLastUiRefreshAt] = React.useState<string | null>(
     null
   )
+
+  const mockMode = React.useMemo(() => {
+    if (!mounted) return false
+    return isMockMode()
+  }, [mounted])
 
   const refresh = React.useCallback(
     async (force = false) => {
@@ -91,9 +97,17 @@ export function OmniDashboard() {
   )
 
   React.useEffect(() => {
-    if (mockMode) {
+    if (!mounted) return
+
+    const isMock = isMockMode()
+    if (isMock) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setUser(mockUser)
+      setActiveView(resolveInitialView(true))
+      setAuthLoading(false)
       return
     }
+
     void api
       .me()
       .then((me) => {
@@ -103,10 +117,13 @@ export function OmniDashboard() {
       .catch(() => {
         setUser(null)
       })
-       .finally(() => setAuthLoading(false))
-   }, [mockMode])
+      .finally(() => setAuthLoading(false))
+  }, [mounted])
 
   React.useEffect(() => {
+    if (!mounted || !user) {
+      return
+    }
     const initialId = window.setTimeout(() => {
       void refresh(false)
     }, 0)
@@ -119,9 +136,9 @@ export function OmniDashboard() {
       window.clearTimeout(initialId)
       window.clearInterval(intervalId)
     }
-  }, [refresh, pollKey, user])
+  }, [refresh, pollKey, user, mounted])
 
-  if (authLoading) {
+  if (!mounted || authLoading) {
     return <DashboardSkeleton />
   }
 

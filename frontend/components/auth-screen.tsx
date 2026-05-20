@@ -14,6 +14,7 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import {
   Tooltip,
   TooltipContent,
@@ -64,22 +65,36 @@ export function AuthScreen({
               : "Use your portal account."}
           </CardDescription>
         </CardHeader>
-        <CardContent className="flex flex-col gap-3">
-          <TextField label="Username" value={username} onChange={setUsername} />
-          <PasswordField
-            label="Password"
-            value={password}
-            onChange={setPassword}
-          />
-          {error ? <p className="text-sm text-destructive">{error}</p> : null}
-          <Button onClick={() => void submit()}>
-            {setupRequired ? (
-              <UserPlus data-icon="inline-start" />
-            ) : (
-              <LogIn data-icon="inline-start" />
-            )}
-            {setupRequired ? "Create admin" : "Login"}
-          </Button>
+        <CardContent>
+          <form
+            className="flex flex-col gap-3"
+            onSubmit={(e) => {
+              e.preventDefault()
+              void submit()
+            }}
+          >
+            <TextField
+              label="Username"
+              value={username}
+              onChange={setUsername}
+              required
+            />
+            <PasswordField
+              label="Password"
+              value={password}
+              onChange={setPassword}
+              required
+            />
+            {error ? <p className="text-sm text-destructive">{error}</p> : null}
+            <Button type="submit">
+              {setupRequired ? (
+                <UserPlus data-icon="inline-start" />
+              ) : (
+                <LogIn data-icon="inline-start" />
+              )}
+              {setupRequired ? "Create admin" : "Login"}
+            </Button>
+          </form>
         </CardContent>
       </Card>
     </main>
@@ -91,21 +106,24 @@ function TextField({
   value,
   onChange,
   type = "text",
+  required,
 }: {
   label: string
   value: string
   onChange: (value: string) => void
   type?: string
+  required?: boolean
 }) {
   return (
-    <label className="flex flex-col gap-1 text-xs font-medium">
-      {label}
+    <div className="flex flex-col gap-1.5">
+      <Label className="text-xs font-medium">{label}</Label>
       <Input
         type={type}
         value={value}
         onChange={(event) => onChange(event.target.value)}
+        required={required}
       />
-    </label>
+    </div>
   )
 }
 
@@ -113,23 +131,26 @@ function PasswordField({
   label,
   value,
   onChange,
+  required,
 }: {
   label: string
   value: string
   onChange: (value: string) => void
+  required?: boolean
 }) {
   const [visible, setVisible] = React.useState(false)
   const Icon = visible ? EyeOff : Eye
 
   return (
-    <label className="flex flex-col gap-1 text-xs font-medium">
-      {label}
+    <div className="flex flex-col gap-1.5">
+      <Label className="text-xs font-medium">{label}</Label>
       <div className="relative">
         <Input
           className="pr-10"
           type={visible ? "text" : "password"}
           value={value}
           onChange={(event) => onChange(event.target.value)}
+          required={required}
         />
         <TooltipProvider>
           <Tooltip>
@@ -150,6 +171,6 @@ function PasswordField({
           </Tooltip>
         </TooltipProvider>
       </div>
-    </label>
+    </div>
   )
 }

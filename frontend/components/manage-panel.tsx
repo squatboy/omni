@@ -3,13 +3,13 @@
 import * as React from "react"
 import {
   Check,
-  CheckCircle2,
   Eye,
   EyeOff,
+  Loader2,
   TestTube2,
   Trash2,
-  X,
 } from "lucide-react"
+import { toast } from "sonner"
 
 import { api, type TestResult } from "@/lib/api"
 import type {
@@ -29,7 +29,16 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import {
   Table,
   TableBody,
@@ -51,7 +60,6 @@ const emptyVM: VMResource = {
   name: "",
   address: "",
   description: "",
-  link: "",
   active: true,
 }
 
@@ -102,25 +110,21 @@ export function ManagePanel() {
   const [gitlab, setGitLab] = React.useState<GitLabIntegration[]>([])
   const [nexus, setNexus] = React.useState<NexusIntegration[]>([])
   const [users, setUsers] = React.useState<User[]>([])
-  const [messageState, setMessageState] = React.useState<{
-    text: string
-    type: "success" | "error"
-  } | null>(null)
 
   const setMessage = React.useCallback((msg: string | null) => {
-    if (!msg) {
-      setMessageState(null)
-      return
-    }
+    if (!msg) return
+
     const isError =
       msg.toLowerCase().includes("fail") ||
       msg.toLowerCase().includes("error") ||
       msg.toLowerCase().includes("invalid") ||
       msg.toLowerCase().includes("not found")
 
-    setMessageState({ text: msg, type: isError ? "error" : "success" })
-
-    setTimeout(() => setMessageState(null), 3000)
+    if (isError) {
+      toast.error(msg)
+    } else {
+      toast.success(msg)
+    }
   }, [])
   const [vmForm, setVMForm] = React.useState<VMResource>(emptyVM)
   const [kubernetesForm, setKubernetesForm] = React.useState<
@@ -222,33 +226,8 @@ export function ManagePanel() {
     await load()
   }
 
-  async function runTest(test: () => Promise<TestResult>) {
-    const result = await test()
-    setMessage(
-      result.ok
-        ? `Test ${result.status}.`
-        : `Test failed: ${result.error?.message ?? result.status}`
-    )
-  }
-
   return (
     <div className="flex flex-col gap-4">
-      {messageState ? (
-        <div
-          className={`fixed left-1/2 top-4 z-50 flex -translate-x-1/2 items-center gap-2 rounded-md border px-4 py-3 text-sm shadow-md transition-all animate-in fade-in slide-in-from-top-4 ${
-            messageState.type === "error"
-              ? "border-destructive bg-destructive/10 text-destructive dark:bg-destructive/20"
-              : "border-green-500/50 bg-green-50 text-green-700 dark:bg-green-500/10 dark:text-green-400"
-          }`}
-        >
-          {messageState.type === "error" ? (
-            <X className="size-4" />
-          ) : (
-            <CheckCircle2 className="size-4" />
-          )}
-          <span>{messageState.text}</span>
-        </div>
-      ) : null}
       <Tabs defaultValue="resources" className="flex flex-col gap-4">
         <TabsList>
           <TabsTrigger value="resources">Resources</TabsTrigger>
@@ -287,55 +266,58 @@ export function ManagePanel() {
         <TabsContent value="integrations">
           <div className="grid gap-4 xl:grid-cols-2">
             <IntegrationCard title="Kubernetes" configured={kubernetes.length}>
-              <TextInput
-                label="Name"
-                value={kubernetesForm.name}
-                onChange={(name) =>
-                  setKubernetesForm((prev) => ({ ...prev, name }))
-                }
-              />
-              <TextInput
-                label="API URL"
-                value={kubernetesForm.apiUrl}
-                onChange={(apiUrl) =>
-                  setKubernetesForm((prev) => ({ ...prev, apiUrl }))
-                }
-              />
-              <TextInput
-                label="Namespaces"
-                value={kubernetesForm.namespaces.join(",")}
-                onChange={(value) =>
-                  setKubernetesForm((prev) => ({
-                    ...prev,
-                    namespaces: splitList(value),
-                  }))
-                }
-              />
-              <SecretInput
-                configured={kubernetesForm.tokenConfigured}
-                value={kubernetesForm.token}
-                onChange={(token) =>
-                  setKubernetesForm((prev) => ({ ...prev, token }))
-                }
-              />
-              <ActiveToggle
-                checked={kubernetesForm.active}
-                onChange={(active) =>
-                  setKubernetesForm((prev) => ({ ...prev, active }))
-                }
-              />
-              <FormActions
-                onSave={() =>
+              <form
+                className="flex flex-col gap-3"
+                onSubmit={(e) => {
+                  e.preventDefault()
                   void saveKubernetes().catch((error) =>
                     setMessage(error.message)
                   )
-                }
-                onTest={() =>
-                  void runTest(() => api.testKubernetes(kubernetesForm)).catch(
-                    (error) => setMessage(error.message)
-                  )
-                }
-              />
+                }}
+              >
+                <TextInput
+                  label="Name"
+                  value={kubernetesForm.name}
+                  onChange={(name) =>
+                    setKubernetesForm((prev) => ({ ...prev, name }))
+                  }
+                  required
+                />
+                <TextInput
+                  label="API URL"
+                  value={kubernetesForm.apiUrl}
+                  onChange={(apiUrl) =>
+                    setKubernetesForm((prev) => ({ ...prev, apiUrl }))
+                  }
+                  required
+                />
+                <TextInput
+                  label="Namespaces"
+                  value={kubernetesForm.namespaces.join(",")}
+                  onChange={(value) =>
+                    setKubernetesForm((prev) => ({
+                      ...prev,
+                      namespaces: splitList(value),
+                    }))
+                  }
+                />
+                <SecretInput
+                  configured={kubernetesForm.tokenConfigured}
+                  value={kubernetesForm.token}
+                  onChange={(token) =>
+                    setKubernetesForm((prev) => ({ ...prev, token }))
+                  }
+                />
+                <ActiveToggle
+                  checked={kubernetesForm.active}
+                  onChange={(active) =>
+                    setKubernetesForm((prev) => ({ ...prev, active }))
+                  }
+                />
+                <FormActions
+                  onTest={() => api.testKubernetes(kubernetesForm)}
+                />
+              </form>
               <IntegrationList
                 items={kubernetes}
                 onEdit={(item) => setKubernetesForm({ ...item, token: "" })}
@@ -348,43 +330,44 @@ export function ManagePanel() {
               />
             </IntegrationCard>
             <IntegrationCard title="ArgoCD" configured={argocd.length}>
-              <TextInput
-                label="Name"
-                value={argocdForm.name}
-                onChange={(name) =>
-                  setArgoCDForm((prev) => ({ ...prev, name }))
-                }
-              />
-              <TextInput
-                label="Base URL"
-                value={argocdForm.baseUrl}
-                onChange={(baseUrl) =>
-                  setArgoCDForm((prev) => ({ ...prev, baseUrl }))
-                }
-              />
-              <SecretInput
-                configured={argocdForm.tokenConfigured}
-                value={argocdForm.token}
-                onChange={(token) =>
-                  setArgoCDForm((prev) => ({ ...prev, token }))
-                }
-              />
-              <ActiveToggle
-                checked={argocdForm.active}
-                onChange={(active) =>
-                  setArgoCDForm((prev) => ({ ...prev, active }))
-                }
-              />
-              <FormActions
-                onSave={() =>
+              <form
+                className="flex flex-col gap-3"
+                onSubmit={(e) => {
+                  e.preventDefault()
                   void saveArgoCD().catch((error) => setMessage(error.message))
-                }
-                onTest={() =>
-                  void runTest(() => api.testArgoCD(argocdForm)).catch(
-                    (error) => setMessage(error.message)
-                  )
-                }
-              />
+                }}
+              >
+                <TextInput
+                  label="Name"
+                  value={argocdForm.name}
+                  onChange={(name) =>
+                    setArgoCDForm((prev) => ({ ...prev, name }))
+                  }
+                  required
+                />
+                <TextInput
+                  label="Base URL"
+                  value={argocdForm.baseUrl}
+                  onChange={(baseUrl) =>
+                    setArgoCDForm((prev) => ({ ...prev, baseUrl }))
+                  }
+                  required
+                />
+                <SecretInput
+                  configured={argocdForm.tokenConfigured}
+                  value={argocdForm.token}
+                  onChange={(token) =>
+                    setArgoCDForm((prev) => ({ ...prev, token }))
+                  }
+                />
+                <ActiveToggle
+                  checked={argocdForm.active}
+                  onChange={(active) =>
+                    setArgoCDForm((prev) => ({ ...prev, active }))
+                  }
+                />
+                <FormActions onTest={() => api.testArgoCD(argocdForm)} />
+              </form>
               <IntegrationList
                 items={argocd}
                 onEdit={(item) => setArgoCDForm({ ...item, token: "" })}
@@ -397,54 +380,59 @@ export function ManagePanel() {
               />
             </IntegrationCard>
             <IntegrationCard title="GitLab" configured={gitlab.length}>
-              <TextInput
-                label="Name"
-                value={gitlabForm.name}
-                onChange={(name) =>
-                  setGitLabForm((prev) => ({ ...prev, name }))
-                }
-              />
-              <TextInput
-                label="Base URL"
-                value={gitlabForm.baseUrl}
-                onChange={(baseUrl) =>
-                  setGitLabForm((prev) => ({ ...prev, baseUrl }))
-                }
-              />
-              <TextInput
-                label="Projects"
-                value={gitlabForm.projectsText}
-                onChange={(projectsText) =>
-                  setGitLabForm((prev) => ({ ...prev, projectsText }))
-                }
-                placeholder="name|group/project|main"
-              />
-              <SecretInput
-                configured={gitlabForm.tokenConfigured}
-                value={gitlabForm.token}
-                onChange={(token) =>
-                  setGitLabForm((prev) => ({ ...prev, token }))
-                }
-              />
-              <ActiveToggle
-                checked={gitlabForm.active}
-                onChange={(active) =>
-                  setGitLabForm((prev) => ({ ...prev, active }))
-                }
-              />
-              <FormActions
-                onSave={() =>
+              <form
+                className="flex flex-col gap-3"
+                onSubmit={(e) => {
+                  e.preventDefault()
                   void saveGitLab().catch((error) => setMessage(error.message))
-                }
-                onTest={() =>
-                  void runTest(() =>
+                }}
+              >
+                <TextInput
+                  label="Name"
+                  value={gitlabForm.name}
+                  onChange={(name) =>
+                    setGitLabForm((prev) => ({ ...prev, name }))
+                  }
+                  required
+                />
+                <TextInput
+                  label="Base URL"
+                  value={gitlabForm.baseUrl}
+                  onChange={(baseUrl) =>
+                    setGitLabForm((prev) => ({ ...prev, baseUrl }))
+                  }
+                  required
+                />
+                <TextInput
+                  label="Projects"
+                  value={gitlabForm.projectsText}
+                  onChange={(projectsText) =>
+                    setGitLabForm((prev) => ({ ...prev, projectsText }))
+                  }
+                  placeholder="name|group/project|main"
+                />
+                <SecretInput
+                  configured={gitlabForm.tokenConfigured}
+                  value={gitlabForm.token}
+                  onChange={(token) =>
+                    setGitLabForm((prev) => ({ ...prev, token }))
+                  }
+                />
+                <ActiveToggle
+                  checked={gitlabForm.active}
+                  onChange={(active) =>
+                    setGitLabForm((prev) => ({ ...prev, active }))
+                  }
+                />
+                <FormActions
+                  onTest={() =>
                     api.testGitLab({
                       ...gitlabForm,
                       projects: parseProjects(gitlabForm.projectsText),
                     })
-                  ).catch((error) => setMessage(error.message))
-                }
-              />
+                  }
+                />
+              </form>
               <IntegrationList
                 items={gitlab}
                 onEdit={(item) =>
@@ -472,32 +460,35 @@ export function ManagePanel() {
               />
             </IntegrationCard>
             <IntegrationCard title="Nexus" configured={nexus.length}>
-              <TextInput
-                label="Name"
-                value={nexusForm.name}
-                onChange={(name) => setNexusForm((prev) => ({ ...prev, name }))}
-              />
-              <TextInput
-                label="URL"
-                value={nexusForm.url}
-                onChange={(url) => setNexusForm((prev) => ({ ...prev, url }))}
-              />
-              <ActiveToggle
-                checked={nexusForm.active}
-                onChange={(active) =>
-                  setNexusForm((prev) => ({ ...prev, active }))
-                }
-              />
-              <FormActions
-                onSave={() =>
+              <form
+                className="flex flex-col gap-3"
+                onSubmit={(e) => {
+                  e.preventDefault()
                   void saveNexus().catch((error) => setMessage(error.message))
-                }
-                onTest={() =>
-                  void runTest(() => api.testNexus(nexusForm)).catch((error) =>
-                    setMessage(error.message)
-                  )
-                }
-              />
+                }}
+              >
+                <TextInput
+                  label="Name"
+                  value={nexusForm.name}
+                  onChange={(name) =>
+                    setNexusForm((prev) => ({ ...prev, name }))
+                  }
+                  required
+                />
+                <TextInput
+                  label="URL"
+                  value={nexusForm.url}
+                  onChange={(url) => setNexusForm((prev) => ({ ...prev, url }))}
+                  required
+                />
+                <ActiveToggle
+                  checked={nexusForm.active}
+                  onChange={(active) =>
+                    setNexusForm((prev) => ({ ...prev, active }))
+                  }
+                />
+                <FormActions onTest={() => api.testNexus(nexusForm)} />
+              </form>
               <IntegrationList
                 items={nexus}
                 onEdit={setNexusForm}
@@ -518,51 +509,56 @@ export function ManagePanel() {
               <CardDescription>Admin can manage portal users.</CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col gap-4">
-              <div className="grid gap-3 md:grid-cols-4">
+              <form
+                className="grid gap-3 md:grid-cols-[120px_1fr_1fr_auto]"
+                onSubmit={(e) => {
+                  e.preventDefault()
+                  void createUser().catch((error) => setMessage(error.message))
+                }}
+              >
+                <div className="flex flex-col gap-1.5">
+                  <Label className="text-xs font-medium">Role</Label>
+                  <Select
+                    value={userForm.role}
+                    onValueChange={(value) =>
+                      setUserForm((prev) => ({
+                        ...prev,
+                        role: value as "admin" | "viewer",
+                      }))
+                    }
+                  >
+                    <SelectTrigger className="h-7 text-xs">
+                      <SelectValue placeholder="Select role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="viewer">viewer</SelectItem>
+                      <SelectItem value="admin">admin</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
                 <TextInput
                   label="Username"
                   value={userForm.username}
                   onChange={(username) =>
                     setUserForm((prev) => ({ ...prev, username }))
                   }
+                  required
                 />
-                <label className="flex flex-col gap-1 text-xs font-medium">
-                  Role
-                  <select
-                    className="h-9 rounded-md border bg-background px-3 text-sm"
-                    value={userForm.role}
-                    onChange={(event) =>
-                      setUserForm((prev) => ({
-                        ...prev,
-                        role: event.target.value as "admin" | "viewer",
-                      }))
-                    }
-                  >
-                    <option value="viewer">viewer</option>
-                    <option value="admin">admin</option>
-                  </select>
-                </label>
                 <PasswordInput
                   label="Password"
                   value={userForm.password}
                   onChange={(password) =>
                     setUserForm((prev) => ({ ...prev, password }))
                   }
+                  required
                 />
                 <div className="flex items-end">
-                  <Button
-                    className="w-full"
-                    onClick={() =>
-                      void createUser().catch((error) =>
-                        setMessage(error.message)
-                      )
-                    }
-                  >
+                  <Button className="w-full" type="submit">
                     <Check data-icon="inline-start" />
                     Create
                   </Button>
                 </div>
-              </div>
+              </form>
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -603,29 +599,32 @@ function ResourceForm({
   onSave: () => void
 }) {
   return (
-    <div className="grid gap-3 md:grid-cols-6">
+    <form
+      className="grid gap-3 md:grid-cols-6"
+      onSubmit={(e) => {
+        e.preventDefault()
+        onSave()
+      }}
+    >
       <TextInput
         label="Name"
         value={value.name}
         onChange={(name) => onChange({ ...value, name })}
+        required
       />
       <TextInput
         label="Address"
         value={value.address}
         onChange={(address) => onChange({ ...value, address })}
+        required
       />
       <TextInput
         label="Description"
         value={value.description ?? ""}
         onChange={(description) => onChange({ ...value, description })}
       />
-      <TextInput
-        label="Link"
-        value={value.link ?? ""}
-        onChange={(link) => onChange({ ...value, link })}
-      />
       <div className="flex items-end">
-        <Button className="w-full" onClick={onSave}>
+        <Button className="w-full" type="submit">
           <Check data-icon="inline-start" />
           Save
         </Button>
@@ -636,7 +635,7 @@ function ResourceForm({
           onChange={(active) => onChange({ ...value, active })}
         />
       </div>
-    </div>
+    </form>
   )
 }
 
@@ -760,23 +759,26 @@ function TextInput({
   onChange,
   placeholder,
   type = "text",
+  required,
 }: {
   label: string
   value: string
   onChange: (value: string) => void
   placeholder?: string
   type?: string
+  required?: boolean
 }) {
   return (
-    <label className="flex flex-col gap-1 text-xs font-medium">
-      {label}
+    <div className="flex flex-col gap-1.5">
+      <Label className="text-xs font-medium">{label}</Label>
       <Input
         type={type}
         value={value}
         placeholder={placeholder}
         onChange={(event) => onChange(event.target.value)}
+        required={required}
       />
-    </label>
+    </div>
   )
 }
 
@@ -785,18 +787,20 @@ function PasswordInput({
   value,
   onChange,
   placeholder,
+  required,
 }: {
   label: string
   value: string
   onChange: (value: string) => void
   placeholder?: string
+  required?: boolean
 }) {
   const [visible, setVisible] = React.useState(false)
   const Icon = visible ? EyeOff : Eye
 
   return (
-    <label className="flex flex-col gap-1 text-xs font-medium">
-      {label}
+    <div className="flex flex-col gap-1.5">
+      <Label className="text-xs font-medium">{label}</Label>
       <div className="relative">
         <Input
           className="pr-10"
@@ -804,6 +808,7 @@ function PasswordInput({
           value={value}
           placeholder={placeholder}
           onChange={(event) => onChange(event.target.value)}
+          required={required}
         />
         <TooltipProvider>
           <Tooltip>
@@ -824,7 +829,7 @@ function PasswordInput({
           </Tooltip>
         </TooltipProvider>
       </div>
-    </label>
+    </div>
   )
 }
 
@@ -832,10 +837,12 @@ function SecretInput({
   configured,
   value,
   onChange,
+  required,
 }: {
   configured: boolean
   value: string
   onChange: (value: string) => void
+  required?: boolean
 }) {
   return (
     <PasswordInput
@@ -843,6 +850,7 @@ function SecretInput({
       value={value}
       placeholder={configured ? "Configured - enter only to replace" : ""}
       onChange={onChange}
+      required={required}
     />
   )
 }
@@ -855,34 +863,76 @@ function ActiveToggle({
   onChange: (checked: boolean) => void
 }) {
   return (
-    <label className="flex items-center gap-2 text-xs font-medium">
-      <input
-        type="checkbox"
+    <div className="flex items-center gap-2">
+      <Checkbox
+        id="active-toggle"
         checked={checked}
-        onChange={(event) => onChange(event.target.checked)}
+        onCheckedChange={(checked) => onChange(!!checked)}
       />
-      Active
-    </label>
+      <Label htmlFor="active-toggle" className="text-xs font-medium cursor-pointer">
+        Active
+      </Label>
+    </div>
   )
 }
 
 function FormActions({
-  onSave,
   onTest,
 }: {
-  onSave: () => void
-  onTest: () => void
+  onTest: () => Promise<TestResult>
 }) {
+  const [isLoading, setIsLoading] = React.useState(false)
+  const [result, setResult] = React.useState<{ ok: boolean; message: string } | null>(null)
+
+  const handleTest = async () => {
+    setIsLoading(true)
+    setResult(null)
+    try {
+      const res = await onTest()
+      setResult({
+        ok: res.ok,
+        message: res.ok
+          ? `Test ${res.status}.`
+          : `Test failed: ${res.error?.message ?? res.status}`,
+      })
+    } catch (error) {
+      setResult({
+        ok: false,
+        message: `Test failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   return (
-    <div className="flex flex-wrap gap-2">
-      <Button onClick={onSave}>
-        <Check data-icon="inline-start" />
-        Save
-      </Button>
-      <Button variant="outline" onClick={onTest}>
-        <TestTube2 data-icon="inline-start" />
-        Test connection
-      </Button>
+    <div className="flex flex-wrap items-center gap-2">
+      <div className="flex gap-2">
+        <Button type="submit" disabled={isLoading}>
+          <Check data-icon="inline-start" />
+          Save
+        </Button>
+        <Button variant="outline" type="button" onClick={handleTest} disabled={isLoading}>
+          {isLoading ? (
+            <Loader2 className="animate-spin" data-icon="inline-start" />
+          ) : (
+            <TestTube2 data-icon="inline-start" />
+          )}
+          Test connection
+        </Button>
+      </div>
+      {result && (
+        <Badge
+          variant={result.ok ? "outline" : "destructive"}
+          className={`h-7 px-2 rounded-md text-xs font-medium whitespace-nowrap ${
+            result.ok
+              ? "bg-green-500/10 text-green-600 border-green-500/20 dark:text-green-400"
+              : ""
+          }`}
+        >
+          {result.message}
+        </Badge>
+      )}
     </div>
   )
 }

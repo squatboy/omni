@@ -31,7 +31,6 @@ var migrations = []string{
 		name text NOT NULL,
 		address text NOT NULL,
 		description text,
-		link text,
 		active boolean NOT NULL DEFAULT true,
 		created_at timestamptz NOT NULL DEFAULT now(),
 		updated_at timestamptz NOT NULL DEFAULT now(),

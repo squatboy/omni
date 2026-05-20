@@ -84,7 +84,6 @@ type VmInventoryItem struct {
 	Name        string  `json:"name"`
 	Address     string  `json:"address"`
 	Description *string `json:"description,omitempty"`
-	Link        *string `json:"link,omitempty"`
 }
 
 type VmPingState string
@@ -284,7 +283,6 @@ type VMResource struct {
 	Name        string  `json:"name"`
 	Address     string  `json:"address"`
 	Description *string `json:"description,omitempty"`
-	Link        *string `json:"link,omitempty"`
 	Active      bool    `json:"active"`
 }
 

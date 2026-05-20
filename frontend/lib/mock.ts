@@ -79,7 +79,6 @@ function createDefaultMockStore(): MockStore {
         name: "bastion",
         address: "10.40.0.12",
         description: "Shared access node",
-        link: "https://bastion.local",
         active: true,
       },
       {
@@ -87,7 +86,6 @@ function createDefaultMockStore(): MockStore {
         name: "ci-runner",
         address: "10.40.0.21",
         description: "Pipeline executor",
-        link: null,
         active: true,
       },
     ],
@@ -330,7 +328,6 @@ export function createMockSnapshot(): DashboardSnapshot {
           name: "bastion",
           address: "10.40.0.12",
           description: "Shared access node",
-          link: "https://bastion.local",
           state: "up",
           lastCheckedAt: twoMinutesAgo,
         },

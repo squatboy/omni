@@ -216,7 +216,7 @@ func (s *Store) ChangePassword(ctx context.Context, userID, currentPassword, new
 }
 
 func (s *Store) ListVMResources(ctx context.Context) ([]models.VMResource, error) {
-	rows, err := s.db.QueryContext(ctx, `SELECT id, name, address, description, link, active FROM vm_resources ORDER BY name`)
+	rows, err := s.db.QueryContext(ctx, `SELECT id, name, address, description, active FROM vm_resources ORDER BY name`)
 	if err != nil {
 		return nil, err
 	}
@@ -224,7 +224,7 @@ func (s *Store) ListVMResources(ctx context.Context) ([]models.VMResource, error
 	items := []models.VMResource{}
 	for rows.Next() {
 		var item models.VMResource
-		if err := rows.Scan(&item.ID, &item.Name, &item.Address, &item.Description, &item.Link, &item.Active); err != nil {
+		if err := rows.Scan(&item.ID, &item.Name, &item.Address, &item.Description, &item.Active); err != nil {
 			return nil, err
 		}
 		items = append(items, item)
@@ -236,9 +236,9 @@ func (s *Store) SaveVMResource(ctx context.Context, actorID string, item models.
 	if strings.TrimSpace(item.ID) == "" {
 		item.ID = newID("vm")
 		_, err := s.db.ExecContext(ctx, `
-			INSERT INTO vm_resources (id, name, address, description, link, active, created_by, updated_by)
-			VALUES ($1,$2,$3,$4,$5,$6,$7,$7)
-		`, item.ID, item.Name, item.Address, item.Description, item.Link, item.Active, actorID)
+			INSERT INTO vm_resources (id, name, address, description, active, created_by, updated_by)
+			VALUES ($1,$2,$3,$4,$5,$6,$6)
+		`, item.ID, item.Name, item.Address, item.Description, item.Active, actorID)
 		if err != nil {
 			return models.VMResource{}, err
 		}
@@ -246,9 +246,9 @@ func (s *Store) SaveVMResource(ctx context.Context, actorID string, item models.
 	}
 	_, err := s.db.ExecContext(ctx, `
 		UPDATE vm_resources
-		SET name=$2, address=$3, description=$4, link=$5, active=$6, updated_at=now(), updated_by=$7
+		SET name=$2, address=$3, description=$4, active=$5, updated_at=now(), updated_by=$6
 		WHERE id=$1
-	`, item.ID, item.Name, item.Address, item.Description, item.Link, item.Active, actorID)
+	`, item.ID, item.Name, item.Address, item.Description, item.Active, actorID)
 	return item, err
 }
 
@@ -267,7 +267,7 @@ func (s *Store) CollectSettings(ctx context.Context) (models.CollectSettings, er
 	for _, item := range vms {
 		if item.Active {
 			settings.VMs = append(settings.VMs, models.VmInventoryItem{
-				ID: item.ID, Name: item.Name, Address: item.Address, Description: item.Description, Link: item.Link,
+				ID: item.ID, Name: item.Name, Address: item.Address, Description: item.Description,
 			})
 		}
 	}
