@@ -53,7 +53,7 @@ func TestCollectKubernetesSuccess(t *testing.T) {
 	t.Setenv("KUBERNETES_API_URL", server.URL)
 	t.Setenv("KUBERNETES_BEARER_TOKEN", "test-token")
 
-	envelope := CollectKubernetes(context.Background(), kubernetesTestConfig([]string{"apps"}, []string{"apps"}))
+	envelope := CollectKubernetes(context.Background(), kubernetesTestConfig([]string{"apps"}))
 
 	if envelope.Status != models.StatusOk {
 		t.Fatalf("expected ok status, got %s: %#v", envelope.Status, envelope.Error)
@@ -88,9 +88,6 @@ func TestCollectKubernetesSuccess(t *testing.T) {
 	if envelope.Data.Workloads[0].Name != "api" || envelope.Data.Workloads[0].RestartCount != 2 {
 		t.Fatalf("expected deployment restart count to be mapped through ReplicaSet, got %#v", envelope.Data.Workloads[0])
 	}
-	if len(envelope.Data.AppWorkloads) != 2 {
-		t.Fatalf("expected app workloads to include app namespace workloads, got %d", len(envelope.Data.AppWorkloads))
-	}
 }
 
 func TestCollectKubernetesStaleResources(t *testing.T) {
@@ -121,10 +118,10 @@ func TestCollectKubernetesStaleResources(t *testing.T) {
 	t.Setenv("KUBERNETES_API_URL", server.URL)
 	t.Setenv("KUBERNETES_BEARER_TOKEN", "test-token")
 
-	envelope := CollectKubernetes(context.Background(), kubernetesTestConfig([]string{"apps"}, []string{"apps"}))
+	envelope := CollectKubernetes(context.Background(), kubernetesTestConfig([]string{"apps"}))
 
 	if envelope.Status != models.StatusStale || !envelope.Stale {
-		t.Fatalf("expected stale envelope, got status=%s stale=%t", envelope.Status, envelope.Stale)
+		t.Fatalf("expected stale envelope, got status=%s stale=%t error=%v", envelope.Status, envelope.Stale, envelope.Error)
 	}
 	if envelope.Data.Pods.NotReady != 1 {
 		t.Fatalf("expected not ready pod count, got %#v", envelope.Data.Pods)
@@ -142,7 +139,7 @@ func TestCollectKubernetesFailureMapping(t *testing.T) {
 		t.Setenv("KUBERNETES_API_URL", "https://kubernetes.example.internal")
 		t.Setenv("KUBERNETES_BEARER_TOKEN", "")
 
-		envelope := CollectKubernetes(context.Background(), kubernetesTestConfig([]string{"apps"}, nil))
+		envelope := CollectKubernetes(context.Background(), kubernetesTestConfig([]string{"apps"}))
 
 		if envelope.Status != models.StatusPermissionError || envelope.Error == nil || envelope.Error.Code != models.ErrPermissionDenied {
 			t.Fatalf("expected permission error, got status=%s error=%#v", envelope.Status, envelope.Error)
@@ -158,7 +155,7 @@ func TestCollectKubernetesFailureMapping(t *testing.T) {
 		t.Setenv("KUBERNETES_API_URL", server.URL)
 		t.Setenv("KUBERNETES_BEARER_TOKEN", "test-token")
 
-		envelope := CollectKubernetes(context.Background(), kubernetesTestConfig([]string{"apps"}, nil))
+		envelope := CollectKubernetes(context.Background(), kubernetesTestConfig([]string{"apps"}))
 
 		if envelope.Status != models.StatusPermissionError || envelope.Error == nil || envelope.Error.Code != models.ErrPermissionDenied {
 			t.Fatalf("expected permission error, got status=%s error=%#v", envelope.Status, envelope.Error)
@@ -177,7 +174,7 @@ func TestCollectKubernetesFailureMapping(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond)
 		defer cancel()
 
-		envelope := CollectKubernetes(ctx, kubernetesTestConfig([]string{"apps"}, nil))
+		envelope := CollectKubernetes(ctx, kubernetesTestConfig([]string{"apps"}))
 
 		if envelope.Status != models.StatusTimeout || envelope.Error == nil || envelope.Error.Code != models.ErrTimeout {
 			t.Fatalf("expected timeout, got status=%s error=%#v", envelope.Status, envelope.Error)
@@ -194,7 +191,7 @@ func TestCollectKubernetesFailureMapping(t *testing.T) {
 		t.Setenv("KUBERNETES_API_URL", server.URL)
 		t.Setenv("KUBERNETES_BEARER_TOKEN", "test-token")
 
-		envelope := CollectKubernetes(context.Background(), kubernetesTestConfig([]string{"apps"}, nil))
+		envelope := CollectKubernetes(context.Background(), kubernetesTestConfig([]string{"apps"}))
 
 		if envelope.Status != models.StatusDown || envelope.Error == nil || envelope.Error.Code != models.ErrUnknownError {
 			t.Fatalf("expected down parse failure, got status=%s error=%#v", envelope.Status, envelope.Error)
@@ -222,7 +219,7 @@ func TestCollectKubernetesMetricsFailureIsOptional(t *testing.T) {
 	t.Setenv("KUBERNETES_API_URL", server.URL)
 	t.Setenv("KUBERNETES_BEARER_TOKEN", "test-token")
 
-	envelope := CollectKubernetes(context.Background(), kubernetesTestConfig([]string{"apps"}, nil))
+	envelope := CollectKubernetes(context.Background(), kubernetesTestConfig([]string{"apps"}))
 
 	if envelope.Status != models.StatusOk {
 		t.Fatalf("expected ok status despite metrics failure, got %s: %#v", envelope.Status, envelope.Error)
@@ -230,21 +227,16 @@ func TestCollectKubernetesMetricsFailureIsOptional(t *testing.T) {
 	if len(envelope.Data.Nodes) != 1 || envelope.Data.Nodes[0].CpuUsagePercent != nil || envelope.Data.Nodes[0].MemoryUsagePercent != nil {
 		t.Fatalf("expected nil node usage after metrics failure, got %#v", envelope.Data.Nodes)
 	}
-	if len(envelope.Data.AppWorkloads) != 0 {
-		t.Fatalf("expected empty app workloads when app namespaces are empty")
-	}
 }
 
-func kubernetesTestConfig(namespaces []string, appNamespaces []string) []models.KubernetesCollectTarget {
+func kubernetesTestConfig(namespaces []string) []models.KubernetesCollectTarget {
 	return []models.KubernetesCollectTarget{
 		{
-			ID:            "test-k8s",
-			Name:          "Test Kubernetes",
-			ClusterName:   "test-cluster",
-			APIURL:        os.Getenv("KUBERNETES_API_URL"),
-			Token:         os.Getenv("KUBERNETES_BEARER_TOKEN"),
-			Namespaces:    namespaces,
-			AppNamespaces: appNamespaces,
+			ID:         "test-k8s",
+			Name:       "Test Kubernetes",
+			APIURL:     os.Getenv("KUBERNETES_API_URL"),
+			Token:      os.Getenv("KUBERNETES_BEARER_TOKEN"),
+			Namespaces: namespaces,
 		},
 	}
 }

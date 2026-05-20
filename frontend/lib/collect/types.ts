@@ -76,9 +76,7 @@ export type VmsData = {
 }
 
 export type KubernetesInventoryConfig = {
-  clusterName: string
   namespaces: string[]
-  appNamespaces: string[]
 }
 
 export type KubernetesNodeStatus = {
@@ -105,11 +103,10 @@ export type KubernetesWorkloadStatus = {
 }
 
 export type KubernetesData = {
-  clusterName: string
+  name: string
   nodes: KubernetesNodeStatus[]
   namespaces: string[]
   workloads: KubernetesWorkloadStatus[]
-  appWorkloads: KubernetesWorkloadStatus[]
   pods: {
     total: number
     ready: number

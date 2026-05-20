@@ -13,18 +13,17 @@ func CollectVMs(ctx context.Context, vms []models.VmInventoryItem) models.Collec
 	now := time.Now().Format(time.RFC3339)
 
 	if len(vms) == 0 {
-		collectedAt := now
-		return models.CollectEnvelope[models.VmsData]{
-			Source:      models.SourceVMs,
-			Status:      models.StatusOk,
-			AttemptedAt: now,
-			CollectedAt: &collectedAt,
-			Stale:       false,
-			Error:       nil,
-			Data:        models.VmsData{Items: []models.VmStatus{}},
-		}
+	        collectedAt := now
+	        return models.CollectEnvelope[models.VmsData]{
+	                Source:      models.SourceVMs,
+	                Status:      models.StatusUnknown,
+	                AttemptedAt: now,
+	                CollectedAt: &collectedAt,
+	                Stale:       false,
+	                Error:       nil,
+	                Data:        models.VmsData{Items: []models.VmStatus{}},
+	        }
 	}
-
 	results := make([]models.VmStatus, len(vms))
 	var wg sync.WaitGroup
 	var upCount int

@@ -36,7 +36,7 @@ export function OverviewPanel({ snapshot }: { snapshot: DashboardSnapshot }) {
         <CardHeader>
           <CardTitle>Workload Readiness</CardTitle>
           <CardDescription>
-            {snapshot.kubernetes.data.clusterName} cluster snapshot
+            {snapshot.kubernetes.data.name} cluster snapshot
           </CardDescription>
           <CardAction>
             <StatusBadge

@@ -30,17 +30,16 @@ func CollectGitLab(ctx context.Context, targets []models.GitLabCollectTarget) mo
 	now := time.Now().Format(time.RFC3339)
 
 	if len(targets) == 0 {
-		collectedAt := now
-		return models.CollectEnvelope[models.GitLabData]{
-			Source:      models.SourceGitLab,
-			Status:      models.StatusOk,
-			AttemptedAt: now,
-			CollectedAt: &collectedAt,
-			Stale:       false,
-			Data:        models.GitLabData{Projects: []models.GitLabProjectStatus{}},
-		}
+	        collectedAt := now
+	        return models.CollectEnvelope[models.GitLabData]{
+	                Source:      models.SourceGitLab,
+	                Status:      models.StatusUnknown,
+	                AttemptedAt: now,
+	                CollectedAt: &collectedAt,
+	                Stale:       false,
+	                Data:        models.GitLabData{Projects: []models.GitLabProjectStatus{}},
+	        }
 	}
-
 	var projects []models.GitLabProjectStatus
 	status := models.StatusOk
 	var collectErr *models.CollectError

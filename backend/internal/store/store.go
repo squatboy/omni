@@ -1,20 +1,20 @@
 package store
 
 import (
-	"context"
-	"crypto/aes"
-	"crypto/cipher"
-	"crypto/rand"
-	"crypto/sha256"
-	"database/sql"
-	"encoding/base64"
-	"encoding/hex"
-	"errors"
-	"fmt"
-	"io"
-	"strings"
-	"time"
-
+        "context"
+        "crypto/aes"
+        "crypto/cipher"
+        "crypto/rand"
+        "crypto/sha256"
+        "database/sql"
+        "encoding/base64"
+        "encoding/hex"
+        "errors"
+        "fmt"
+        "io"
+        "log"
+        "strings"
+        "time"
 	"omni-backend/internal/models"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
@@ -131,7 +131,7 @@ func (s *Store) ListUsers(ctx context.Context) ([]models.User, error) {
 	}
 	defer rows.Close()
 
-	var users []models.User
+	users := []models.User{}
 	for rows.Next() {
 		var user models.User
 		var role string
@@ -221,7 +221,7 @@ func (s *Store) ListVMResources(ctx context.Context) ([]models.VMResource, error
 		return nil, err
 	}
 	defer rows.Close()
-	var items []models.VMResource
+	items := []models.VMResource{}
 	for rows.Next() {
 		var item models.VMResource
 		if err := rows.Scan(&item.ID, &item.Name, &item.Address, &item.Description, &item.Link, &item.Active); err != nil {
@@ -274,60 +274,61 @@ func (s *Store) CollectSettings(ctx context.Context) (models.CollectSettings, er
 
 	kubernetes, err := s.ListKubernetesIntegrations(ctx)
 	if err != nil {
-		return settings, err
+	        return settings, err
 	}
 	for _, item := range kubernetes {
-		if !item.Active {
-			continue
-		}
-		token, err := s.getCredential(ctx, "kubernetes", item.ID, "bearer_token")
-		if err != nil {
-			continue
-		}
-		settings.Kubernetes = append(settings.Kubernetes, models.KubernetesCollectTarget{
-			ID: item.ID, Name: item.Name, ClusterName: item.ClusterName, APIURL: item.APIURL, Token: token,
-			Namespaces: item.Namespaces, AppNamespaces: item.AppNamespaces,
-		})
-	}
+	        if !item.Active {
+	                continue
+	        }
+	        token, err := s.getCredential(ctx, "kubernetes", item.ID, "bearer_token")
+	        if err != nil {
+	                log.Printf("failed to get bearer_token for kubernetes integration %s (%s): %v", item.Name, item.ID, err)
+	                continue
+	        }
+	        settings.Kubernetes = append(settings.Kubernetes, models.KubernetesCollectTarget{
+	                ID: item.ID, Name: item.Name, APIURL: item.APIURL, Token: token,
+	                Namespaces: item.Namespaces,
+	        })	}
 
 	argocd, err := s.ListArgoCDIntegrations(ctx)
 	if err != nil {
-		return settings, err
+	        return settings, err
 	}
 	for _, item := range argocd {
-		if !item.Active {
-			continue
-		}
-		token, err := s.getCredential(ctx, "argocd", item.ID, "token")
-		if err != nil {
-			continue
-		}
-		settings.ArgoCD = append(settings.ArgoCD, models.ArgoCDCollectTarget{ID: item.ID, Name: item.Name, BaseURL: item.BaseURL, Token: token})
+	        if !item.Active {
+	                continue
+	        }
+	        token, err := s.getCredential(ctx, "argocd", item.ID, "token")
+	        if err != nil {
+	                log.Printf("failed to get token for argocd integration %s (%s): %v", item.Name, item.ID, err)
+	                continue
+	        }
+	        settings.ArgoCD = append(settings.ArgoCD, models.ArgoCDCollectTarget{ID: item.ID, Name: item.Name, BaseURL: item.BaseURL, Token: token})
 	}
 
 	gitlab, err := s.ListGitLabIntegrations(ctx)
 	if err != nil {
-		return settings, err
+	        return settings, err
 	}
 	for _, item := range gitlab {
-		if !item.Active {
-			continue
-		}
-		token, err := s.getCredential(ctx, "gitlab", item.ID, "token")
-		if err != nil {
-			continue
-		}
-		projects := make([]models.GitLabProjectTarget, 0, len(item.Projects))
-		for _, project := range item.Projects {
-			if project.Active {
-				projects = append(projects, models.GitLabProjectTarget{
-					Name: project.Name, Path: project.Path, DefaultBranch: project.DefaultBranch, Link: project.Link,
-				})
-			}
-		}
-		settings.GitLab = append(settings.GitLab, models.GitLabCollectTarget{ID: item.ID, Name: item.Name, BaseURL: item.BaseURL, Token: token, Projects: projects})
+	        if !item.Active {
+	                continue
+	        }
+	        token, err := s.getCredential(ctx, "gitlab", item.ID, "token")
+	        if err != nil {
+	                log.Printf("failed to get token for gitlab integration %s (%s): %v", item.Name, item.ID, err)
+	                continue
+	        }
+	        projects := make([]models.GitLabProjectTarget, 0, len(item.Projects))
+	        for _, project := range item.Projects {
+	                if project.Active {
+	                        projects = append(projects, models.GitLabProjectTarget{
+	                                Name: project.Name, Path: project.Path, DefaultBranch: project.DefaultBranch, Link: project.Link,
+	                        })
+	                }
+	        }
+	        settings.GitLab = append(settings.GitLab, models.GitLabCollectTarget{ID: item.ID, Name: item.Name, BaseURL: item.BaseURL, Token: token, Projects: projects})
 	}
-
 	nexus, err := s.ListNexusIntegrations(ctx)
 	if err != nil {
 		return settings, err
@@ -341,48 +342,47 @@ func (s *Store) CollectSettings(ctx context.Context) (models.CollectSettings, er
 }
 
 func (s *Store) ListKubernetesIntegrations(ctx context.Context) ([]models.KubernetesIntegration, error) {
-	rows, err := s.db.QueryContext(ctx, `
-		SELECT k.id, k.name, k.cluster_name, k.api_url, k.namespaces, k.app_namespaces, k.active,
-			EXISTS(SELECT 1 FROM integration_credentials c WHERE c.integration_type='kubernetes' AND c.integration_id=k.id AND c.secret_name='bearer_token')
-		FROM kubernetes_integrations k
-		ORDER BY k.name
-	`)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []models.KubernetesIntegration
-	for rows.Next() {
-		var item models.KubernetesIntegration
-		if err := rows.Scan(&item.ID, &item.Name, &item.ClusterName, &item.APIURL, &item.Namespaces, &item.AppNamespaces, &item.Active, &item.TokenConfigured); err != nil {
-			return nil, err
-		}
-		items = append(items, item)
-	}
-	return items, rows.Err()
+        rows, err := s.db.QueryContext(ctx, `
+                SELECT k.id, k.name, k.api_url, k.namespaces, k.active,
+                        EXISTS(SELECT 1 FROM integration_credentials c WHERE c.integration_type='kubernetes' AND c.integration_id=k.id AND c.secret_name='bearer_token')
+                FROM kubernetes_integrations k
+                ORDER BY k.name
+        `)
+        if err != nil {
+                return nil, err
+        }
+        defer rows.Close()
+        items := []models.KubernetesIntegration{}
+        for rows.Next() {
+                var item models.KubernetesIntegration
+                if err := rows.Scan(&item.ID, &item.Name, &item.APIURL, &item.Namespaces, &item.Active, &item.TokenConfigured); err != nil {
+                        return nil, err
+                }
+                items = append(items, item)
+        }
+        return items, rows.Err()
 }
-
 func (s *Store) SaveKubernetesIntegration(ctx context.Context, actorID string, item models.KubernetesIntegration, token string) (models.KubernetesIntegration, error) {
-	if item.ID == "" {
-		item.ID = newID("k8s")
-		_, err := s.db.ExecContext(ctx, `
-			INSERT INTO kubernetes_integrations (id, name, cluster_name, api_url, namespaces, app_namespaces, active, created_by, updated_by)
-			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$8)
-		`, item.ID, item.Name, item.ClusterName, item.APIURL, item.Namespaces, item.AppNamespaces, item.Active, actorID)
-		if err != nil {
-			return models.KubernetesIntegration{}, err
-		}
-	} else {
-		_, err := s.db.ExecContext(ctx, `
-			UPDATE kubernetes_integrations
-			SET name=$2, cluster_name=$3, api_url=$4, namespaces=$5, app_namespaces=$6, active=$7, updated_at=now(), updated_by=$8
-			WHERE id=$1
-		`, item.ID, item.Name, item.ClusterName, item.APIURL, item.Namespaces, item.AppNamespaces, item.Active, actorID)
-		if err != nil {
-			return models.KubernetesIntegration{}, err
-		}
-	}
-	if strings.TrimSpace(token) != "" {
+        if item.ID == "" {
+                item.ID = newID("k8s")
+                _, err := s.db.ExecContext(ctx, `
+                        INSERT INTO kubernetes_integrations (id, name, api_url, namespaces, active, created_by, updated_by)
+                        VALUES ($1,$2,$3,$4,$5,$6,$6)
+                `, item.ID, item.Name, item.APIURL, item.Namespaces, item.Active, actorID)
+                if err != nil {
+                        return models.KubernetesIntegration{}, err
+                }
+        } else {
+                _, err := s.db.ExecContext(ctx, `
+                        UPDATE kubernetes_integrations
+                        SET name=$2, api_url=$3, namespaces=$4, active=$5, updated_at=now(), updated_by=$6
+                        WHERE id=$1
+                `, item.ID, item.Name, item.APIURL, item.Namespaces, item.Active, actorID)
+                if err != nil {
+                        return models.KubernetesIntegration{}, err
+                }
+                }
+                if strings.TrimSpace(token) != "" {
 		if err := s.setCredential(ctx, "kubernetes", item.ID, "bearer_token", token); err != nil {
 			return models.KubernetesIntegration{}, err
 		}
@@ -402,7 +402,7 @@ func (s *Store) ListArgoCDIntegrations(ctx context.Context) ([]models.ArgoCDInte
 		return nil, err
 	}
 	defer rows.Close()
-	var items []models.ArgoCDIntegration
+	items := []models.ArgoCDIntegration{}
 	for rows.Next() {
 		var item models.ArgoCDIntegration
 		if err := rows.Scan(&item.ID, &item.Name, &item.BaseURL, &item.Active, &item.TokenConfigured); err != nil {
@@ -446,7 +446,7 @@ func (s *Store) ListGitLabIntegrations(ctx context.Context) ([]models.GitLabInte
 		return nil, err
 	}
 	defer rows.Close()
-	var items []models.GitLabIntegration
+	items := []models.GitLabIntegration{}
 	for rows.Next() {
 		var item models.GitLabIntegration
 		if err := rows.Scan(&item.ID, &item.Name, &item.BaseURL, &item.Active, &item.TokenConfigured); err != nil {
@@ -504,7 +504,7 @@ func (s *Store) ListNexusIntegrations(ctx context.Context) ([]models.NexusIntegr
 		return nil, err
 	}
 	defer rows.Close()
-	var items []models.NexusIntegration
+	items := []models.NexusIntegration{}
 	for rows.Next() {
 		var item models.NexusIntegration
 		if err := rows.Scan(&item.ID, &item.Name, &item.URL, &item.Active); err != nil {
@@ -546,7 +546,7 @@ func (s *Store) listGitLabProjects(ctx context.Context, integrationID string) ([
 		return nil, err
 	}
 	defer rows.Close()
-	var items []models.GitLabProjectItem
+	items := []models.GitLabProjectItem{}
 	for rows.Next() {
 		var item models.GitLabProjectItem
 		if err := rows.Scan(&item.ID, &item.Name, &item.Path, &item.DefaultBranch, &item.Link, &item.Active); err != nil {

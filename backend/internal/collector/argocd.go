@@ -34,17 +34,16 @@ func CollectArgoCD(ctx context.Context, targets []models.ArgoCDCollectTarget) mo
 	now := time.Now().Format(time.RFC3339)
 
 	if len(targets) == 0 {
-		collectedAt := now
-		return models.CollectEnvelope[models.ArgoCdData]{
-			Source:      models.SourceArgoCD,
-			Status:      models.StatusOk,
-			AttemptedAt: now,
-			CollectedAt: &collectedAt,
-			Stale:       false,
-			Data:        models.ArgoCdData{Applications: []models.ArgoCdApplication{}},
-		}
+	        collectedAt := now
+	        return models.CollectEnvelope[models.ArgoCdData]{
+	                Source:      models.SourceArgoCD,
+	                Status:      models.StatusUnknown,
+	                AttemptedAt: now,
+	                CollectedAt: &collectedAt,
+	                Stale:       false,
+	                Data:        models.ArgoCdData{Applications: []models.ArgoCdApplication{}},
+	        }
 	}
-
 	var wg sync.WaitGroup
 	var mu sync.Mutex
 	applications := []models.ArgoCdApplication{}

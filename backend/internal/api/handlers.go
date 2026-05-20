@@ -198,20 +198,19 @@ func (api *API) handleDeleteKubernetes(c *gin.Context) {
 }
 
 func (api *API) handleTestKubernetes(c *gin.Context) {
-	var req struct {
-		models.KubernetesIntegration
-		Token string `json:"token"`
-	}
-	if !bindJSON(c, &req) {
-		return
-	}
-	result := collector.CollectKubernetes(c.Request.Context(), []models.KubernetesCollectTarget{{
-		ID: req.ID, Name: req.Name, ClusterName: req.ClusterName, APIURL: req.APIURL, Token: req.Token,
-		Namespaces: req.Namespaces, AppNamespaces: req.AppNamespaces,
-	}})
-	writeTestResult(c, result.Status, result.Error)
+        var req struct {
+                models.KubernetesIntegration
+                Token string `json:"token"`
+        }
+        if !bindJSON(c, &req) {
+                return
+        }
+        result := collector.CollectKubernetes(c.Request.Context(), []models.KubernetesCollectTarget{{
+                ID: req.ID, Name: req.Name, APIURL: req.APIURL, Token: req.Token,
+                Namespaces: req.Namespaces,
+        }})
+        writeTestResult(c, result.Status, result.Error)
 }
-
 func (api *API) handleListArgoCD(c *gin.Context) {
 	items, err := api.store.ListArgoCDIntegrations(c.Request.Context())
 	writeJSON(c, items, err)

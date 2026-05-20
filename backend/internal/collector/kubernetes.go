@@ -155,65 +155,61 @@ func (e *kubernetesAPIError) Error() string {
 }
 
 func CollectKubernetes(ctx context.Context, targets []models.KubernetesCollectTarget) models.CollectEnvelope[models.KubernetesData] {
-	now := time.Now().Format(time.RFC3339)
-	if len(targets) == 0 {
-		collectedAt := now
-		return models.CollectEnvelope[models.KubernetesData]{
-			Source:      models.SourceKubernetes,
-			Status:      models.StatusOk,
-			AttemptedAt: now,
-			CollectedAt: &collectedAt,
-			Stale:       false,
-			Data:        emptyKubernetesData(models.KubernetesCollectTarget{ClusterName: "unconfigured"}),
-		}
-	}
+        now := time.Now().Format(time.RFC3339)
+        if len(targets) == 0 {
+                collectedAt := now
+                return models.CollectEnvelope[models.KubernetesData]{
+                        Source:      models.SourceKubernetes,
+                        Status:      models.StatusUnknown,
+                        AttemptedAt: now,
+                        CollectedAt: &collectedAt,
+                        Stale:       false,
+                        Data:        emptyKubernetesData(models.KubernetesCollectTarget{Name: "unconfigured"}),
+                }
+        }
+        var wg sync.WaitGroup
+        var mu sync.Mutex
+        merged := emptyKubernetesData(targets[0])
+        status := models.StatusOk
+        var collectErr *models.CollectError
+        isStale := false
 
-	var wg sync.WaitGroup
-	var mu sync.Mutex
-	merged := emptyKubernetesData(targets[0])
-	merged.ClusterName = ""
-	status := models.StatusOk
-	var collectErr *models.CollectError
-	isStale := false
+        for _, target := range targets {
+                wg.Add(1)
+                go func(target models.KubernetesCollectTarget) {
+                        defer wg.Done()
+                        result := collectKubernetesTarget(ctx, target, now)
+                        mu.Lock()
+                        mergeKubernetesData(&merged, result.Data)
+                        if severity(result.Status) > severity(status) {
+                                status = result.Status
+                                collectErr = result.Error
+                        }
+                        if result.Stale {
+                                isStale = true
+                        }
+                        mu.Unlock()
+                }(target)
+        }
+        wg.Wait()
 
-	for _, target := range targets {
-		wg.Add(1)
-		go func(target models.KubernetesCollectTarget) {
-			defer wg.Done()
-			result := collectKubernetesTarget(ctx, target, now)
-			mu.Lock()
-			mergeKubernetesData(&merged, result.Data)
-			if severity(result.Status) > severity(status) {
-				status = result.Status
-				collectErr = result.Error
-			}
-			if result.Stale {
-				isStale = true
-			}
-			mu.Unlock()
-		}(target)
-	}
-	wg.Wait()
-	if merged.ClusterName == "" {
-		names := make([]string, 0, len(targets))
-		for _, target := range targets {
-			names = append(names, target.ClusterName)
-		}
-		merged.ClusterName = strings.Join(names, ", ")
-	}
+        names := make([]string, 0, len(targets))
+        for _, target := range targets {
+                names = append(names, target.Name)
+        }
+        merged.Name = strings.Join(names, ", ")
 
-	collectedAt := now
-	return models.CollectEnvelope[models.KubernetesData]{
-		Source:      models.SourceKubernetes,
-		Status:      status,
-		AttemptedAt: now,
-		CollectedAt: &collectedAt,
-		Stale:       isStale,
-		Error:       collectErr,
-		Data:        merged,
-	}
+        collectedAt := now
+        return models.CollectEnvelope[models.KubernetesData]{
+                Source:      models.SourceKubernetes,
+                Status:      status,
+                AttemptedAt: now,
+                CollectedAt: &collectedAt,
+                Stale:       isStale,
+                Error:       collectErr,
+                Data:        merged,
+        }
 }
-
 func collectKubernetesTarget(ctx context.Context, target models.KubernetesCollectTarget, now string) models.CollectEnvelope[models.KubernetesData] {
 	data := emptyKubernetesData(target)
 	baseURL := strings.TrimRight(target.APIURL, "/")
@@ -323,11 +319,10 @@ func collectKubernetesTarget(ctx context.Context, target models.KubernetesCollec
 	}
 
 	data.Workloads = workloads
-	data.AppWorkloads = filterAppWorkloads(workloads, target.AppNamespaces)
 
 	status := models.StatusOk
 	if isStale {
-		status = models.StatusStale
+	        status = models.StatusStale
 	}
 
 	collectedAt := now
@@ -343,46 +338,34 @@ func collectKubernetesTarget(ctx context.Context, target models.KubernetesCollec
 }
 
 func emptyKubernetesData(target models.KubernetesCollectTarget) models.KubernetesData {
-	clusterName := target.ClusterName
-	if clusterName == "" {
-		clusterName = "unknown-cluster"
-	}
-
-	return models.KubernetesData{
-		ClusterName:  clusterName,
-		Nodes:        []models.KubernetesNodeStatus{},
-		Namespaces:   target.Namespaces,
-		Workloads:    []models.KubernetesWorkloadStatus{},
-		AppWorkloads: []models.KubernetesWorkloadStatus{},
-		Pods:         models.PodsStatus{},
-		Services:     models.ServicesStatus{},
-		Ingresses: models.IngressesStatus{
-			Hosts: []string{},
-		},
-		Pvcs: models.PvcsStatus{},
-	}
+        return models.KubernetesData{
+                Name:       target.Name,
+                Nodes:      []models.KubernetesNodeStatus{},
+                Namespaces: target.Namespaces,
+                Workloads:  []models.KubernetesWorkloadStatus{},
+                Pods:       models.PodsStatus{},
+                Services:   models.ServicesStatus{},
+                Ingresses: models.IngressesStatus{
+                        Hosts: []string{},
+                },
+                Pvcs: models.PvcsStatus{},
+        }
 }
 
 func mergeKubernetesData(dst *models.KubernetesData, src models.KubernetesData) {
-	if dst.ClusterName == "" {
-		dst.ClusterName = src.ClusterName
-	} else if src.ClusterName != "" {
-		dst.ClusterName += ", " + src.ClusterName
-	}
-	dst.Nodes = append(dst.Nodes, src.Nodes...)
-	dst.Namespaces = append(dst.Namespaces, src.Namespaces...)
-	dst.Workloads = append(dst.Workloads, src.Workloads...)
-	dst.AppWorkloads = append(dst.AppWorkloads, src.AppWorkloads...)
-	dst.Pods.Total += src.Pods.Total
-	dst.Pods.Ready += src.Pods.Ready
-	dst.Pods.NotReady += src.Pods.NotReady
-	dst.Pods.Restarting += src.Pods.Restarting
-	dst.Services.Total += src.Services.Total
-	dst.Ingresses.Total += src.Ingresses.Total
-	dst.Ingresses.Hosts = append(dst.Ingresses.Hosts, src.Ingresses.Hosts...)
-	dst.Pvcs.Total += src.Pvcs.Total
-	dst.Pvcs.Bound += src.Pvcs.Bound
-	dst.Pvcs.Pending += src.Pvcs.Pending
+        dst.Nodes = append(dst.Nodes, src.Nodes...)
+        dst.Namespaces = append(dst.Namespaces, src.Namespaces...)
+        dst.Workloads = append(dst.Workloads, src.Workloads...)
+        dst.Pods.Total += src.Pods.Total
+        dst.Pods.Ready += src.Pods.Ready
+        dst.Pods.NotReady += src.Pods.NotReady
+        dst.Pods.Restarting += src.Pods.Restarting
+        dst.Services.Total += src.Services.Total
+        dst.Ingresses.Total += src.Ingresses.Total
+        dst.Ingresses.Hosts = append(dst.Ingresses.Hosts, src.Ingresses.Hosts...)
+        dst.Pvcs.Total += src.Pvcs.Total
+        dst.Pvcs.Bound += src.Pvcs.Bound
+        dst.Pvcs.Pending += src.Pvcs.Pending
 }
 
 func newKubernetesHTTPClient() (*http.Client, error) {
@@ -635,27 +618,7 @@ func controllerOwner(owners []kubernetesOwnerReference) (kubernetesOwnerReferenc
 	return kubernetesOwnerReference{}, false
 }
 
-func filterAppWorkloads(workloads []models.KubernetesWorkloadStatus, appNamespaces []string) []models.KubernetesWorkloadStatus {
-	if len(appNamespaces) == 0 {
-		return []models.KubernetesWorkloadStatus{}
-	}
-
-	namespaceSet := make(map[string]struct{}, len(appNamespaces))
-	for _, namespace := range appNamespaces {
-		namespaceSet[namespace] = struct{}{}
-	}
-
-	appWorkloads := make([]models.KubernetesWorkloadStatus, 0)
-	for _, workload := range workloads {
-		if _, ok := namespaceSet[workload.Namespace]; ok {
-			appWorkloads = append(appWorkloads, workload)
-		}
-	}
-	return appWorkloads
-}
-
-func kubernetesAPIEnvelope(now string, data models.KubernetesData, err error) models.CollectEnvelope[models.KubernetesData] {
-	var apiErr *kubernetesAPIError
+func kubernetesAPIEnvelope(now string, data models.KubernetesData, err error) models.CollectEnvelope[models.KubernetesData] {	var apiErr *kubernetesAPIError
 	if errors.As(err, &apiErr) {
 		return kubernetesError(now, data, apiErr.code, apiErr.err.Error(), apiErr.status)
 	}

@@ -13,17 +13,16 @@ func CollectNexus(ctx context.Context, targets []models.NexusCollectTarget) mode
 	now := time.Now().Format(time.RFC3339)
 
 	if len(targets) == 0 {
-		collectedAt := now
-		return models.CollectEnvelope[models.NexusData]{
-			Source:      models.SourceNexus,
-			Status:      models.StatusOk,
-			AttemptedAt: now,
-			CollectedAt: &collectedAt,
-			Stale:       false,
-			Data:        models.NexusData{Items: []models.NexusStatus{}, CheckedAt: now},
-		}
+	        collectedAt := now
+	        return models.CollectEnvelope[models.NexusData]{
+	                Source:      models.SourceNexus,
+	                Status:      models.StatusUnknown,
+	                AttemptedAt: now,
+	                CollectedAt: &collectedAt,
+	                Stale:       false,
+	                Data:        models.NexusData{Items: []models.NexusStatus{}, CheckedAt: now},
+	        }
 	}
-
 	results := make([]models.NexusStatus, len(targets))
 	var wg sync.WaitGroup
 	var downCount int

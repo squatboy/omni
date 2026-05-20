@@ -36,7 +36,7 @@ export function KubernetesPanel({
       <Card size="sm" className="rounded-md">
         <CardHeader>
           <CardTitle>Node Resources</CardTitle>
-          <CardDescription>{data.clusterName} cluster</CardDescription>
+          <CardDescription>{data.name} cluster</CardDescription>
           <CardAction>
             <StatusBadge status={envelope.status} stale={envelope.stale} />
           </CardAction>

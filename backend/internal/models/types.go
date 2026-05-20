@@ -151,17 +151,15 @@ type PvcsStatus struct {
 }
 
 type KubernetesData struct {
-	ClusterName  string                     `json:"clusterName"`
-	Nodes        []KubernetesNodeStatus     `json:"nodes"`
-	Namespaces   []string                   `json:"namespaces"`
-	Workloads    []KubernetesWorkloadStatus `json:"workloads"`
-	AppWorkloads []KubernetesWorkloadStatus `json:"appWorkloads"`
-	Pods         PodsStatus                 `json:"pods"`
-	Services     ServicesStatus             `json:"services"`
-	Ingresses    IngressesStatus            `json:"ingresses"`
-	Pvcs         PvcsStatus                 `json:"pvcs"`
+        Name       string                     `json:"name"`
+        Nodes      []KubernetesNodeStatus     `json:"nodes"`
+        Namespaces []string                   `json:"namespaces"`
+        Workloads  []KubernetesWorkloadStatus `json:"workloads"`
+        Pods       PodsStatus                 `json:"pods"`
+        Services   ServicesStatus             `json:"services"`
+        Ingresses  IngressesStatus            `json:"ingresses"`
+        Pvcs       PvcsStatus                 `json:"pvcs"`
 }
-
 type ArgoCdApplication struct {
 	IntegrationName string  `json:"integrationName,omitempty"`
 	Name            string  `json:"name"`
@@ -227,21 +225,15 @@ type NexusStatus struct {
 }
 
 type KubernetesInventoryConfig struct {
-	ClusterName   string   `json:"clusterName"`
-	Namespaces    []string `json:"namespaces"`
-	AppNamespaces []string `json:"appNamespaces"`
+        Namespaces    []string `json:"namespaces"`
 }
-
 type KubernetesCollectTarget struct {
-	ID            string
-	Name          string
-	ClusterName   string
-	APIURL        string
-	Token         string
-	Namespaces    []string
-	AppNamespaces []string
+        ID            string
+        Name          string
+        APIURL        string
+        Token         string
+        Namespaces    []string
 }
-
 type GitLabCollectTarget struct {
 	ID       string
 	Name     string
@@ -297,16 +289,13 @@ type VMResource struct {
 }
 
 type KubernetesIntegration struct {
-	ID              string   `json:"id"`
-	Name            string   `json:"name"`
-	ClusterName     string   `json:"clusterName"`
-	APIURL          string   `json:"apiUrl"`
-	Namespaces      []string `json:"namespaces"`
-	AppNamespaces   []string `json:"appNamespaces"`
-	Active          bool     `json:"active"`
-	TokenConfigured bool     `json:"tokenConfigured"`
+        ID              string   `json:"id"`
+        Name            string   `json:"name"`
+        APIURL          string   `json:"apiUrl"`
+        Namespaces      []string `json:"namespaces"`
+        Active          bool     `json:"active"`
+        TokenConfigured bool     `json:"tokenConfigured"`
 }
-
 type GitLabIntegration struct {
 	ID              string              `json:"id"`
 	Name            string              `json:"name"`

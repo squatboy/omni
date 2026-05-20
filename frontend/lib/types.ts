@@ -30,10 +30,8 @@ export type VMResource = {
 export type KubernetesIntegration = {
   id: string
   name: string
-  clusterName: string
   apiUrl: string
   namespaces: string[]
-  appNamespaces: string[]
   active: boolean
   tokenConfigured: boolean
 }

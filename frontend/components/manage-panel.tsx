@@ -2,12 +2,13 @@
 
 import * as React from "react"
 import {
+  Check,
   CheckCircle2,
   Eye,
   EyeOff,
-  Save,
   TestTube2,
   Trash2,
+  X,
 } from "lucide-react"
 
 import { api, type TestResult } from "@/lib/api"
@@ -57,10 +58,8 @@ const emptyVM: VMResource = {
 const emptyKubernetes: KubernetesIntegration & { token: string } = {
   id: "",
   name: "",
-  clusterName: "",
   apiUrl: "",
   namespaces: [],
-  appNamespaces: [],
   active: true,
   tokenConfigured: false,
   token: "",
@@ -103,7 +102,26 @@ export function ManagePanel() {
   const [gitlab, setGitLab] = React.useState<GitLabIntegration[]>([])
   const [nexus, setNexus] = React.useState<NexusIntegration[]>([])
   const [users, setUsers] = React.useState<User[]>([])
-  const [message, setMessage] = React.useState<string | null>(null)
+  const [messageState, setMessageState] = React.useState<{
+    text: string
+    type: "success" | "error"
+  } | null>(null)
+
+  const setMessage = React.useCallback((msg: string | null) => {
+    if (!msg) {
+      setMessageState(null)
+      return
+    }
+    const isError =
+      msg.toLowerCase().includes("fail") ||
+      msg.toLowerCase().includes("error") ||
+      msg.toLowerCase().includes("invalid") ||
+      msg.toLowerCase().includes("not found")
+
+    setMessageState({ text: msg, type: isError ? "error" : "success" })
+
+    setTimeout(() => setMessageState(null), 3000)
+  }, [])
   const [vmForm, setVMForm] = React.useState<VMResource>(emptyVM)
   const [kubernetesForm, setKubernetesForm] = React.useState<
     KubernetesIntegration & { token: string }
@@ -138,12 +156,12 @@ export function ManagePanel() {
       api.listNexus(),
       api.listUsers(),
     ])
-    setVMs(nextVMs)
-    setKubernetes(nextKubernetes)
-    setArgoCD(nextArgoCD)
-    setGitLab(nextGitLab)
-    setNexus(nextNexus)
-    setUsers(nextUsers)
+    setVMs(nextVMs ?? [])
+    setKubernetes(nextKubernetes ?? [])
+    setArgoCD(nextArgoCD ?? [])
+    setGitLab(nextGitLab ?? [])
+    setNexus(nextNexus ?? [])
+    setUsers(nextUsers ?? [])
   }, [])
 
   React.useEffect(() => {
@@ -215,10 +233,20 @@ export function ManagePanel() {
 
   return (
     <div className="flex flex-col gap-4">
-      {message ? (
-        <div className="flex items-center gap-2 rounded-md border bg-card px-3 py-2 text-sm">
-          <CheckCircle2 data-icon="inline-start" />
-          <span>{message}</span>
+      {messageState ? (
+        <div
+          className={`fixed left-1/2 top-4 z-50 flex -translate-x-1/2 items-center gap-2 rounded-md border px-4 py-3 text-sm shadow-md transition-all animate-in fade-in slide-in-from-top-4 ${
+            messageState.type === "error"
+              ? "border-destructive bg-destructive/10 text-destructive dark:bg-destructive/20"
+              : "border-green-500/50 bg-green-50 text-green-700 dark:bg-green-500/10 dark:text-green-400"
+          }`}
+        >
+          {messageState.type === "error" ? (
+            <X className="size-4" />
+          ) : (
+            <CheckCircle2 className="size-4" />
+          )}
+          <span>{messageState.text}</span>
         </div>
       ) : null}
       <Tabs defaultValue="resources" className="flex flex-col gap-4">
@@ -267,13 +295,6 @@ export function ManagePanel() {
                 }
               />
               <TextInput
-                label="Cluster"
-                value={kubernetesForm.clusterName}
-                onChange={(clusterName) =>
-                  setKubernetesForm((prev) => ({ ...prev, clusterName }))
-                }
-              />
-              <TextInput
                 label="API URL"
                 value={kubernetesForm.apiUrl}
                 onChange={(apiUrl) =>
@@ -287,16 +308,6 @@ export function ManagePanel() {
                   setKubernetesForm((prev) => ({
                     ...prev,
                     namespaces: splitList(value),
-                  }))
-                }
-              />
-              <TextInput
-                label="App namespaces"
-                value={kubernetesForm.appNamespaces.join(",")}
-                onChange={(value) =>
-                  setKubernetesForm((prev) => ({
-                    ...prev,
-                    appNamespaces: splitList(value),
                   }))
                 }
               />
@@ -440,7 +451,7 @@ export function ManagePanel() {
                   setGitLabForm({
                     ...item,
                     token: "",
-                    projectsText: item.projects
+                    projectsText: (item.projects ?? [])
                       .map((project) =>
                         [
                           project.name,
@@ -547,7 +558,7 @@ export function ManagePanel() {
                       )
                     }
                   >
-                    <Save data-icon="inline-start" />
+                    <Check data-icon="inline-start" />
                     Create
                   </Button>
                 </div>
@@ -615,7 +626,7 @@ function ResourceForm({
       />
       <div className="flex items-end">
         <Button className="w-full" onClick={onSave}>
-          <Save data-icon="inline-start" />
+          <Check data-icon="inline-start" />
           Save
         </Button>
       </div>
@@ -865,7 +876,7 @@ function FormActions({
   return (
     <div className="flex flex-wrap gap-2">
       <Button onClick={onSave}>
-        <Save data-icon="inline-start" />
+        <Check data-icon="inline-start" />
         Save
       </Button>
       <Button variant="outline" onClick={onTest}>

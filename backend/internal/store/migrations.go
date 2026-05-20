@@ -107,4 +107,6 @@ var migrations = []string{
 	)`,
 	`CREATE INDEX IF NOT EXISTS sessions_user_id_idx ON sessions(user_id)`,
 	`CREATE INDEX IF NOT EXISTS gitlab_projects_integration_id_idx ON gitlab_projects(integration_id)`,
-}
+	`ALTER TABLE kubernetes_integrations DROP COLUMN IF EXISTS cluster_name`,
+	`ALTER TABLE kubernetes_integrations DROP COLUMN IF EXISTS app_namespaces`,
+	}

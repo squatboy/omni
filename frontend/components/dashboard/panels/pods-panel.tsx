@@ -26,14 +26,14 @@ export function PodsPanel({
   envelope: CollectEnvelope<KubernetesData, "kubernetes">
 }) {
   const data = envelope.data
-  const workloads = data.appWorkloads
+  const workloads = data.workloads
 
   return (
     <Card size="sm" className="rounded-md">
       <CardHeader>
-        <CardTitle>Frontend / Backend Pods</CardTitle>
+        <CardTitle>Workloads</CardTitle>
         <CardDescription>
-          {workloads.length} app workloads in {data.namespaces.length} namespaces
+          {workloads.length} workloads in {data.namespaces.length} namespaces
         </CardDescription>
         <CardAction>
           <StatusBadge status={envelope.status} stale={envelope.stale} />
@@ -44,7 +44,7 @@ export function PodsPanel({
           <TableHeader>
             <TableRow>
               <TableHead>Namespace</TableHead>
-              <TableHead>App Workload</TableHead>
+              <TableHead>Workload</TableHead>
               <TableHead>Readiness</TableHead>
               <TableHead>Rollout</TableHead>
               <TableHead>Restart Count</TableHead>
