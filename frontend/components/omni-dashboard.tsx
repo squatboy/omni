@@ -2,10 +2,7 @@
 
 import * as React from "react"
 import {
-  Activity,
   AlertTriangle,
-  HeartPulse,
-  LayoutDashboard,
   RefreshCw,
 } from "lucide-react"
 
@@ -13,18 +10,17 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { cn } from "@/lib/utils"
+import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
+import { AppSidebar } from "./app-sidebar"
 import {
   POLL_INTERVAL_MS,
-  sourceIcons,
   sourceLabels,
-  sourceOrder,
 } from "./dashboard/lib/constants"
 import type { DashboardSnapshot, DashboardTab } from "./dashboard/lib/types"
-import { formatDateTime, formatTime, loadSnapshot } from "./dashboard/lib/utils"
+import { formatDateTime, loadSnapshot } from "./dashboard/lib/utils"
 import { HealthBadge } from "./dashboard/shared/common"
 import { DashboardContent } from "./dashboard/shared/dashboard-content"
 import { DashboardSkeleton } from "./dashboard/shared/dashboard-skeleton"
-import { SidebarItem } from "./dashboard/shared/sidebar-item"
 
 export function OmniDashboard() {
   const [snapshot, setSnapshot] = React.useState<DashboardSnapshot | null>(null)
@@ -69,80 +65,27 @@ export function OmniDashboard() {
     }
   }, [refresh, pollKey])
 
-  const sources = snapshot?.overview.data.sources ?? []
-
   return (
-    <main className="min-h-svh bg-background text-foreground">
-      <aside className="border-b bg-card/80 backdrop-blur lg:fixed lg:inset-y-0 lg:left-0 lg:w-64 lg:border-r lg:border-b-0">
-        <div className="flex h-full flex-col gap-4 p-4">
-          <div className="flex items-center gap-3">
-            <div className="flex size-9 items-center justify-center rounded-md bg-primary text-primary-foreground">
-              <Activity className="size-4" />
-            </div>
+    <SidebarProvider>
+      <AppSidebar
+        snapshot={snapshot}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        lastUiRefreshAt={lastUiRefreshAt}
+      />
+      <SidebarInset>
+        <header className="sticky top-0 flex h-14 items-center gap-4 border-b bg-background/95 px-4 backdrop-blur md:px-6">
+          <SidebarTrigger className="-ml-1" />
+          <Separator orientation="vertical" className="mr-2 h-4" />
+          <div className="flex flex-1 items-center justify-between gap-3">
             <div className="min-w-0">
-              <div className="truncate text-sm font-semibold">Omni</div>
-              <div className="truncate text-xs text-muted-foreground">
-                Infra control surface
-              </div>
-            </div>
-          </div>
-
-          <Separator />
-
-          <nav className="flex flex-col gap-1">
-            <SidebarItem
-              icon={LayoutDashboard}
-              label="Overview"
-              active={activeTab === "overview"}
-              onClick={() => setActiveTab("overview")}
-            />
-            <SidebarItem
-              icon={HeartPulse}
-              label="Platform Health"
-              active={activeTab === "health"}
-              onClick={() => setActiveTab("health")}
-            />
-            {sourceOrder.map((source) => {
-              const summary = sources.find((item) => item.source === source)
-              const Icon = sourceIcons[source]
-
-              return (
-                <SidebarItem
-                  key={source}
-                  icon={Icon}
-                  label={sourceLabels[source]}
-                  active={activeTab === source}
-                  status={summary?.status ?? "unknown"}
-                  stale={summary?.stale ?? false}
-                  onClick={() => setActiveTab(source)}
-                />
-              )
-            })}
-          </nav>
-
-          <div className="mt-auto flex flex-col gap-2 rounded-md border bg-background/60 p-3 text-xs">
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-muted-foreground">UI refresh</span>
-              <span className="font-mono">
-                {lastUiRefreshAt ? formatTime(lastUiRefreshAt) : "--:--:--"}
-              </span>
-            </div>
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-muted-foreground">Interval</span>
-              <span className="font-mono">30s</span>
-            </div>
-          </div>
-        </div>
-      </aside>
-
-      <section className="min-w-0 lg:pl-64">
-        <header className="sticky top-0 border-b bg-background/95 px-4 py-3 backdrop-blur md:px-6">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="min-w-0">
-              <h1 className="truncate text-base font-semibold">
-                Infrastructure Overview
+              <h1 className="truncate text-sm font-semibold">
+                {activeTab === "overview"
+                  ? "Infrastructure Overview"
+                  : sourceLabels[activeTab as keyof typeof sourceLabels] ??
+                    "Platform Health"}
               </h1>
-              <p className="truncate text-xs text-muted-foreground">
+              <p className="truncate text-[10px] text-muted-foreground">
                 Last collect{" "}
                 {snapshot
                   ? formatDateTime(snapshot.overview.data.generatedAt)
@@ -187,7 +130,7 @@ export function OmniDashboard() {
             <DashboardSkeleton />
           )}
         </div>
-      </section>
-    </main>
+      </SidebarInset>
+    </SidebarProvider>
   )
 }

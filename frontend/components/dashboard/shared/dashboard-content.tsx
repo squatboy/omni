@@ -79,9 +79,9 @@ export function DashboardContent({
       <Tabs
         value={activeTab}
         onValueChange={(value) => onTabChange(value as DashboardTab)}
-        className="min-w-0"
+        className="flex min-w-0 flex-col gap-4"
       >
-        <TabsList className="w-full justify-start overflow-x-auto overflow-y-hidden">
+        <TabsList variant="line" className="w-full justify-start overflow-x-auto overflow-y-hidden">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="kubernetes">Kubernetes</TabsTrigger>
           <TabsTrigger value="pods">Pods</TabsTrigger>
@@ -91,30 +91,32 @@ export function DashboardContent({
           <TabsTrigger value="nexus">Nexus</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="overview" className="mt-2">
-          <OverviewPanel snapshot={snapshot} />
-        </TabsContent>
-        <TabsContent value="health" className="mt-2">
-          <PlatformHealthPanel snapshot={snapshot} />
-        </TabsContent>
-        <TabsContent value="kubernetes" className="mt-2">
-          <KubernetesPanel envelope={snapshot.kubernetes} />
-        </TabsContent>
-        <TabsContent value="pods" className="mt-2">
-          <PodsPanel envelope={snapshot.kubernetes} />
-        </TabsContent>
-        <TabsContent value="vms" className="mt-2">
-          <VmPanel envelope={snapshot.vms} />
-        </TabsContent>
-        <TabsContent value="argocd" className="mt-2">
-          <ArgoPanel envelope={snapshot.argocd} />
-        </TabsContent>
-        <TabsContent value="gitlab" className="mt-2">
-          <GitLabPanel envelope={snapshot.gitlab} />
-        </TabsContent>
-        <TabsContent value="nexus" className="mt-2">
-          <NexusPanel envelope={snapshot.nexus} />
-        </TabsContent>
+        <div className="min-w-0">
+          <TabsContent value="overview" className="mt-0">
+            <OverviewPanel snapshot={snapshot} />
+          </TabsContent>
+          <TabsContent value="health" className="mt-0">
+            <PlatformHealthPanel snapshot={snapshot} />
+          </TabsContent>
+          <TabsContent value="kubernetes" className="mt-0">
+            <KubernetesPanel envelope={snapshot.kubernetes} />
+          </TabsContent>
+          <TabsContent value="pods" className="mt-0">
+            <PodsPanel envelope={snapshot.kubernetes} />
+          </TabsContent>
+          <TabsContent value="vms" className="mt-0">
+            <VmPanel envelope={snapshot.vms} />
+          </TabsContent>
+          <TabsContent value="argocd" className="mt-0">
+            <ArgoPanel envelope={snapshot.argocd} />
+          </TabsContent>
+          <TabsContent value="gitlab" className="mt-0">
+            <GitLabPanel envelope={snapshot.gitlab} />
+          </TabsContent>
+          <TabsContent value="nexus" className="mt-0">
+            <NexusPanel envelope={snapshot.nexus} />
+          </TabsContent>
+        </div>
       </Tabs>
     </>
   )
